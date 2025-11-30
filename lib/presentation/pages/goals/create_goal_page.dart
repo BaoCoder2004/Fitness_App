@@ -1,0 +1,355 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/constants/workout_types.dart';
+import '../../../core/helpers/activity_type_helper.dart';
+import '../../../domain/entities/goal.dart';
+import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/goal_repository.dart';
+import '../../../domain/repositories/weight_history_repository.dart';
+import '../../viewmodels/goal_form_view_model.dart';
+
+class CreateGoalPage extends StatefulWidget {
+  const CreateGoalPage({super.key, this.goal});
+
+  final Goal? goal;
+
+  @override
+  State<CreateGoalPage> createState() => _CreateGoalPageState();
+}
+
+class _CreateGoalPageState extends State<CreateGoalPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _targetController = TextEditingController();
+
+  late GoalType _selectedType;
+  bool _weightLossMode = true;
+  String? _selectedActivityType;
+  GoalTimeFrame? _selectedTimeFrame;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType = widget.goal?.goalType ?? GoalType.calories;
+    _targetController.text =
+        widget.goal?.targetValue.toStringAsFixed(1) ?? '';
+    if (widget.goal?.goalType == GoalType.weight) {
+      _weightLossMode = widget.goal?.direction != 'increase';
+    }
+    _selectedActivityType = widget.goal?.activityTypeFilter;
+    _selectedTimeFrame = widget.goal?.timeFrame ?? GoalTimeFrame.daily;
+  }
+
+  bool get isEditing => widget.goal != null;
+
+  @override
+  void dispose() {
+    _targetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => GoalFormViewModel(
+        authRepository: context.read<AuthRepository>(),
+        goalRepository: context.read<GoalRepository>(),
+        weightHistoryRepository: context.read<WeightHistoryRepository>(),
+      ),
+      child: Consumer<GoalFormViewModel>(
+        builder: (context, vm, _) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(isEditing ? 'Chỉnh sửa mục tiêu' : 'Đặt mục tiêu mới'),
+            ),
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionTitle('Loại hoạt động'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedActivityType,
+                        decoration: _inputDecoration(),
+                        items: _buildActivityTypeItems(),
+                        onChanged: vm.isSubmitting || isEditing
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _selectedActivityType = value;
+                                  // Nếu chọn indoor activity và đang chọn distance, đổi sang calories
+                                  if (value != null) {
+                                    final meta = ActivityTypeHelper.resolve(value);
+                                    if (!meta.isOutdoor && _selectedType == GoalType.distance) {
+                                      _selectedType = GoalType.calories;
+                                    }
+                                  }
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle('Khung thời gian'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<GoalTimeFrame>(
+                        initialValue: _selectedTimeFrame,
+                        decoration: _inputDecoration(),
+                        items: GoalTimeFrame.values.map((tf) {
+                          return DropdownMenuItem(
+                            value: tf,
+                            child: Text(tf.displayName),
+                          );
+                        }).toList(),
+                        onChanged: vm.isSubmitting || isEditing
+                            ? null
+                            : (value) {
+                                if (value == null) return;
+                                setState(() => _selectedTimeFrame = value);
+                              },
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle('Loại mục tiêu'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<GoalType>(
+                        key: ValueKey(_selectedType),
+                        initialValue: _selectedType,
+                        decoration: _inputDecoration(),
+                        items: _buildGoalTypeItems(),
+                        onChanged: vm.isSubmitting || isEditing
+                            ? null
+                            : (value) {
+                                if (value == null) return;
+                                setState(() => _selectedType = value);
+                              },
+                      ),
+                      const SizedBox(height: 20),
+                      _SectionTitle(
+                        'Giá trị mục tiêu (${_selectedType.unitLabel})',
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _targetController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: _inputDecoration().copyWith(
+                          hintText: _getTargetHint(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Vui lòng nhập giá trị mục tiêu';
+                          }
+                          final number =
+                              double.tryParse(value.replaceAll(',', '.'));
+                          if (number == null || number <= 0) {
+                            return 'Giá trị phải lớn hơn 0';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_selectedType == GoalType.weight) ...[
+                        const SizedBox(height: 20),
+                        _SectionTitle('Bạn muốn thay đổi thế nào?'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 12,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Giảm cân'),
+                              selected: _weightLossMode,
+                              onSelected: vm.isSubmitting
+                                  ? null
+                                  : (_) =>
+                                      setState(() => _weightLossMode = true),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Tăng cân'),
+                              selected: !_weightLossMode,
+                              onSelected: vm.isSubmitting
+                                  ? null
+                                  : (_) =>
+                                      setState(() => _weightLossMode = false),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 28),
+                      if (vm.errorMessage != null) ...[
+                        Text(
+                          vm.errorMessage!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: vm.isSubmitting ? null : () => _submit(vm),
+                          child: vm.isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(isEditing ? 'Cập nhật mục tiêu' : 'Lưu mục tiêu'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration() {
+    return const InputDecoration(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+    );
+  }
+
+  String _getTargetHint() {
+    switch (_selectedType) {
+      case GoalType.weight:
+        return 'Ví dụ: 5 (kg cần giảm)';
+      case GoalType.distance:
+        return 'Ví dụ: 30 (km)';
+      case GoalType.calories:
+        return 'Ví dụ: 3500 (kcal)';
+      case GoalType.duration:
+        return 'Ví dụ: 600 (phút)';
+    }
+  }
+
+  List<DropdownMenuItem<String>> _buildActivityTypeItems() {
+    final items = <DropdownMenuItem<String>>[
+      // Indoor activities
+      for (final type in indoorWorkoutTypes)
+        DropdownMenuItem(
+          value: type.id,
+          child: Row(
+            children: [
+              Icon(type.icon, size: 20),
+              const SizedBox(width: 8),
+              Text(type.title),
+            ],
+          ),
+        ),
+      // Outdoor activities
+      for (final type in outdoorWorkoutTypes)
+        DropdownMenuItem(
+          value: type['id'] as String,
+          child: Row(
+            children: [
+              Icon(type['icon'] as IconData, size: 20),
+              const SizedBox(width: 8),
+              Text(type['title'] as String),
+            ],
+          ),
+        ),
+    ];
+    return items;
+  }
+
+  List<DropdownMenuItem<GoalType>> _buildGoalTypeItems() {
+    final isIndoor = _selectedActivityType != null &&
+        !ActivityTypeHelper.resolve(_selectedActivityType).isOutdoor;
+
+    return GoalType.values.map((type) {
+      // Ẩn "Quãng đường" nếu chọn indoor activity
+      if (type == GoalType.distance && isIndoor) {
+        return DropdownMenuItem<GoalType>(
+          value: type,
+          enabled: false,
+          child: Text(
+            type.displayName,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(77),
+            ),
+          ),
+        );
+      }
+      return DropdownMenuItem(
+        value: type,
+        child: Text(type.displayName),
+      );
+    }).toList();
+  }
+
+  Future<void> _submit(GoalFormViewModel vm) async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedTimeFrame == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn khung thời gian cho mục tiêu.'),
+        ),
+      );
+      return;
+    }
+
+    final target = double.parse(_targetController.text.replaceAll(',', '.'));
+    final direction = _selectedType == GoalType.weight
+        ? (_weightLossMode ? 'decrease' : 'increase')
+        : null;
+
+    bool success;
+    if (isEditing) {
+      success = await vm.updateGoal(
+        goal: widget.goal!,
+        targetValue: target,
+        direction: direction,
+        activityTypeFilter: _selectedActivityType,
+        timeFrame: _selectedTimeFrame,
+      );
+    } else {
+      success = await vm.submitGoal(
+        goalType: _selectedType,
+        targetValue: target,
+        direction: direction,
+        activityTypeFilter: _selectedActivityType,
+        timeFrame: _selectedTimeFrame,
+      );
+    }
+
+    if (!mounted) return;
+    if (success) {
+      Navigator.of(context).pop(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEditing
+              ? 'Đã cập nhật mục tiêu'
+              : 'Đã tạo mục tiêu thành công'),
+        ),
+      );
+    }
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+    );
+  }
+}
+
