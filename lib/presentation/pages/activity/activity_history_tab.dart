@@ -6,6 +6,7 @@ import '../../../core/helpers/activity_type_helper.dart';
 import '../../../domain/entities/activity_session.dart';
 import '../../../domain/repositories/activity_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/weight_history_repository.dart';
 import '../../viewmodels/activity_history_view_model.dart';
 import '../../widgets/empty_state.dart';
 import 'activity_detail_page.dart';
@@ -19,6 +20,7 @@ class ActivityHistoryTab extends StatelessWidget {
       create: (context) => ActivityHistoryViewModel(
         authRepository: context.read<AuthRepository>(),
         activityRepository: context.read<ActivityRepository>(),
+        weightHistoryRepository: context.read<WeightHistoryRepository>(),
       )..loadHistory(),
       child: const _HistoryContent(),
     );
@@ -104,31 +106,31 @@ class _HistoryContentState extends State<_HistoryContent> {
                 selected: vm.filter == HistoryFilter.year,
                 onTap: () => vm.setFilter(HistoryFilter.year),
               ),
-              IconButton(
-                icon: const Icon(Icons.calendar_today),
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: vm.selectedDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) {
-                    vm.setSelectedDate(picked);
-                  }
-                },
-              ),
             ],
           ),
         ),
+        // Period dropdown (chỉ hiển thị khi không phải "Ngày")
+        if (vm.filter != HistoryFilter.day)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: _PeriodDropdown(
+              selectedFilter: vm.filter,
+              selectedDate: vm.selectedDate,
+              availableWeeks: vm.availableWeeks,
+              availableMonths: vm.availableMonths,
+              availableYears: vm.availableYears,
+              onDateChanged: vm.setSelectedDate,
+            ),
+          ),
         // Activity type filter
         if (vm.availableActivityTypes.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: SizedBox(
               height: 36,
               child: ListView(
                 scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 children: [
                   _FilterChip(
                     label: 'Tất cả',
@@ -197,7 +199,7 @@ class _HistoryContentState extends State<_HistoryContent> {
     final df = DateFormat('dd/MM/yyyy');
     switch (filter) {
       case HistoryFilter.day:
-        return df.format(date);
+        return df.format(DateTime.now());
       case HistoryFilter.week:
         final weekday = date.weekday;
         final start = date.subtract(Duration(days: weekday - 1));
@@ -208,6 +210,136 @@ class _HistoryContentState extends State<_HistoryContent> {
       case HistoryFilter.year:
         return 'Năm ${date.year}';
     }
+  }
+}
+
+class _PeriodDropdown extends StatelessWidget {
+  const _PeriodDropdown({
+    required this.selectedFilter,
+    required this.selectedDate,
+    required this.availableWeeks,
+    required this.availableMonths,
+    required this.availableYears,
+    required this.onDateChanged,
+  });
+
+  final HistoryFilter selectedFilter;
+  final DateTime selectedDate;
+  final List<DateTime> availableWeeks;
+  final List<DateTime> availableMonths;
+  final List<DateTime> availableYears;
+  final ValueChanged<DateTime> onDateChanged;
+
+  String _formatWeek(DateTime monday) {
+    final sunday = monday.add(const Duration(days: 6));
+    final df = DateFormat('dd/MM/yyyy');
+    return '${df.format(monday)} - ${df.format(sunday)}';
+  }
+
+  String _formatMonth(DateTime month) {
+    return '${month.month}/${month.year}';
+  }
+
+  String _formatYear(DateTime year) {
+    return '${year.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<DateTime> availablePeriods;
+    String Function(DateTime) formatter;
+    String? currentValue;
+
+    switch (selectedFilter) {
+      case HistoryFilter.day:
+        // Không hiển thị dropdown cho "Ngày"
+        return const SizedBox.shrink();
+      case HistoryFilter.week:
+        availablePeriods = availableWeeks;
+        formatter = _formatWeek;
+        // Tìm tuần hiện tại được chọn
+        for (final week in availableWeeks) {
+          final weekEnd = week.add(const Duration(days: 6));
+          if (selectedDate.isAfter(week.subtract(const Duration(days: 1))) &&
+              selectedDate.isBefore(weekEnd.add(const Duration(days: 1)))) {
+            currentValue = formatter(week);
+            break;
+          }
+        }
+        if (currentValue == null && availableWeeks.isNotEmpty) {
+          currentValue = formatter(availableWeeks.first);
+        }
+        break;
+      case HistoryFilter.month:
+        availablePeriods = availableMonths;
+        formatter = _formatMonth;
+        // Tìm tháng hiện tại được chọn
+        for (final month in availableMonths) {
+          if (selectedDate.year == month.year && selectedDate.month == month.month) {
+            currentValue = formatter(month);
+            break;
+          }
+        }
+        if (currentValue == null && availableMonths.isNotEmpty) {
+          currentValue = formatter(availableMonths.first);
+        }
+        break;
+      case HistoryFilter.year:
+        availablePeriods = availableYears;
+        formatter = _formatYear;
+        // Tìm năm hiện tại được chọn
+        for (final year in availableYears) {
+          if (selectedDate.year == year.year) {
+            currentValue = formatter(year);
+            break;
+          }
+        }
+        if (currentValue == null && availableYears.isNotEmpty) {
+          currentValue = formatter(availableYears.first);
+        }
+        break;
+    }
+
+    if (availablePeriods.isEmpty) {
+      return Text(
+        'Chưa có dữ liệu',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      value: currentValue,
+      decoration: InputDecoration(
+        labelText: selectedFilter == HistoryFilter.week
+            ? 'Chọn tuần'
+            : selectedFilter == HistoryFilter.month
+                ? 'Chọn tháng'
+                : 'Chọn năm',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      ),
+      items: availablePeriods.map((period) {
+        final label = formatter(period);
+        return DropdownMenuItem<String>(
+          value: label,
+          child: Text(label),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        // Tìm DateTime tương ứng với value được chọn
+        for (final period in availablePeriods) {
+          if (formatter(period) == value) {
+            onDateChanged(period);
+            break;
+          }
+        }
+      },
+    );
   }
 }
 

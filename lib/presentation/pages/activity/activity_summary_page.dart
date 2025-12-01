@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/helpers/activity_type_helper.dart';
+import '../../../core/services/gps_tracking_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../domain/entities/activity_session.dart';
 import '../../../domain/entities/goal.dart';
+import '../../../domain/entities/gps_route.dart';
 import '../../../domain/repositories/activity_repository.dart';
+import '../../../domain/repositories/gps_route_repository.dart';
 import '../../../domain/repositories/goal_repository.dart';
 
 class ActivitySummaryPage extends StatefulWidget {
@@ -14,10 +17,16 @@ class ActivitySummaryPage extends StatefulWidget {
     super.key,
     required this.session,
     required this.activityRepository,
+    this.gpsSegments,
+    this.gpsTotalDistanceKm,
+    this.gpsActiveDurationSeconds,
   });
 
   final ActivitySession session;
   final ActivityRepository activityRepository;
+  final List<GpsSegment>? gpsSegments;
+  final double? gpsTotalDistanceKm;
+  final int? gpsActiveDurationSeconds;
 
   @override
   State<ActivitySummaryPage> createState() => _ActivitySummaryPageState();
@@ -158,7 +167,57 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       createdAt: widget.session.createdAt,
     );
 
+    // Lưu activity trước để lấy activityId thực tế (Firestore auto id)
     await widget.activityRepository.saveSession(updatedSession);
+    if (!mounted) return;
+
+    // Lấy lại buổi tập mới nhất để biết id (phục vụ liên kết với gps_routes)
+    final latestSession =
+        await widget.activityRepository.fetchMostRecentActivity(
+      updatedSession.userId,
+    );
+    final activityId = latestSession?.id.isNotEmpty == true
+        ? latestSession!.id
+        : updatedSession.id;
+
+    // Nếu có dữ liệu GPS thì lưu route vào collection gps_routes
+    if (widget.gpsSegments != null &&
+        widget.gpsSegments!.isNotEmpty &&
+        widget.gpsTotalDistanceKm != null &&
+        widget.gpsActiveDurationSeconds != null) {
+      final gpsRepo = context.read<GpsRouteRepository>();
+
+      final routeSegments = widget.gpsSegments!
+          .map<GpsRouteSegment>(
+            (s) => GpsRouteSegment(
+              points: s.points
+                  .map(
+                    (p) => GpsRoutePoint(
+                      lat: p.position.latitude,
+                      lng: p.position.longitude,
+                      timestamp: p.timestamp,
+                    ),
+                  )
+                  .toList(),
+              startTime: s.startTime,
+              endTime: s.endTime,
+            ),
+          )
+          .toList();
+
+      final route = GpsRoute(
+        id: '',
+        userId: updatedSession.userId,
+        activityId: activityId,
+        segments: routeSegments,
+        totalDistanceKm: widget.gpsTotalDistanceKm!,
+        totalDurationSeconds: widget.gpsActiveDurationSeconds!,
+        createdAt: DateTime.now(),
+      );
+
+      await gpsRepo.saveRoute(route);
+    }
+
     if (!mounted) return;
     await _checkGoalCompletions(updatedSession);
 

@@ -15,29 +15,65 @@ class ChartService {
     required List<ActivitySession> activities,
     required ChartMetric metric,
     required TimeRange range,
+    DateTime? start,
+    DateTime? end,
   }) {
     final Map<DateTime, double> result = {};
+    final now = DateTime.now();
 
     for (final activity in activities) {
+      // Filter theo range nếu có start và end
+      if (start != null && end != null) {
+        final activityDate = DateTime(
+          activity.date.year,
+          activity.date.month,
+          activity.date.day,
+        );
+        final startDate = DateTime(start.year, start.month, start.day);
+        final endDate = DateTime(end.year, end.month, end.day);
+        
+        // Chỉ lấy dữ liệu trong range (bao gồm cả start và end)
+        if (activityDate.isBefore(startDate) || activityDate.isAfter(endDate)) {
+          continue; // Bỏ qua dữ liệu ngoài range
+        }
+      }
+      
       DateTime key;
       switch (range) {
         case TimeRange.day:
+          // Cho "Ngày": Chỉ hiển thị hôm qua và hôm nay
+          final activityDate = DateTime(
+            activity.date.year,
+            activity.date.month,
+            activity.date.day,
+          );
+          final today = DateTime(now.year, now.month, now.day);
+          final yesterday = today.subtract(const Duration(days: 1));
+          
+          // Chỉ lấy dữ liệu của hôm qua và hôm nay
+          if (activityDate.isAtSameMomentAs(yesterday) || activityDate.isAtSameMomentAs(today)) {
+            key = activityDate;
+          } else {
+            continue; // Bỏ qua các ngày khác
+          }
+          break;
+        case TimeRange.week:
+          // Cho "Tuần": Hiển thị theo từng ngày trong tuần (không nhóm)
           key = DateTime(
             activity.date.year,
             activity.date.month,
             activity.date.day,
           );
           break;
-        case TimeRange.week:
+        case TimeRange.month:
+          // Cho "Tháng": Nhóm theo tuần
           final weekday = activity.date.weekday;
           final weekStart = activity.date.subtract(Duration(days: weekday - 1));
           key = DateTime(weekStart.year, weekStart.month, weekStart.day);
           break;
-        case TimeRange.month:
-          key = DateTime(activity.date.year, activity.date.month, 1);
-          break;
         case TimeRange.year:
-          key = DateTime(activity.date.year, 1, 1);
+          // Cho "Năm": Nhóm theo tháng
+          key = DateTime(activity.date.year, activity.date.month, 1);
           break;
         case TimeRange.custom:
           key = DateTime(
@@ -64,6 +100,7 @@ class ChartService {
           break;
       }
 
+      // Cộng dồn giá trị (vì trong 1 ngày có thể có nhiều buổi tập)
       result[key] = (result[key] ?? 0) + value;
     }
 
@@ -74,29 +111,70 @@ class ChartService {
   Map<DateTime, double> aggregateWeights({
     required List<WeightRecord> records,
     required TimeRange range,
+    DateTime? start,
+    DateTime? end,
   }) {
     final Map<DateTime, double> result = {};
+    final Map<DateTime, DateTime> keyToLatestRecord = {}; // Lưu thời gian ghi nhận mới nhất cho mỗi key
+    final now = DateTime.now();
 
-    for (final record in records) {
+    // Sắp xếp records theo thời gian giảm dần (mới nhất trước) để đảm bảo lấy giá trị mới nhất
+    final sortedRecords = List<WeightRecord>.from(records)
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+
+    for (final record in sortedRecords) {
+      // Filter theo range nếu có start và end
+      if (start != null && end != null) {
+        final recordDate = DateTime(
+          record.recordedAt.year,
+          record.recordedAt.month,
+          record.recordedAt.day,
+        );
+        final startDate = DateTime(start.year, start.month, start.day);
+        final endDate = DateTime(end.year, end.month, end.day);
+        
+        // Chỉ lấy dữ liệu trong range (bao gồm cả start và end)
+        if (recordDate.isBefore(startDate) || recordDate.isAfter(endDate)) {
+          continue; // Bỏ qua dữ liệu ngoài range
+        }
+      }
+      
       DateTime key;
       switch (range) {
         case TimeRange.day:
+          // Cho "Ngày": Chỉ hiển thị hôm qua và hôm nay
+          final recordDate = DateTime(
+            record.recordedAt.year,
+            record.recordedAt.month,
+            record.recordedAt.day,
+          );
+          final today = DateTime(now.year, now.month, now.day);
+          final yesterday = today.subtract(const Duration(days: 1));
+          
+          // Chỉ lấy dữ liệu của hôm qua và hôm nay
+          if (recordDate.isAtSameMomentAs(yesterday) || recordDate.isAtSameMomentAs(today)) {
+            key = recordDate;
+          } else {
+            continue; // Bỏ qua các ngày khác
+          }
+          break;
+        case TimeRange.week:
+          // Cho "Tuần": Hiển thị theo từng ngày trong tuần (không nhóm)
           key = DateTime(
             record.recordedAt.year,
             record.recordedAt.month,
             record.recordedAt.day,
           );
           break;
-        case TimeRange.week:
+        case TimeRange.month:
+          // Cho "Tháng": Nhóm theo tuần
           final weekday = record.recordedAt.weekday;
           final weekStart = record.recordedAt.subtract(Duration(days: weekday - 1));
           key = DateTime(weekStart.year, weekStart.month, weekStart.day);
           break;
-        case TimeRange.month:
-          key = DateTime(record.recordedAt.year, record.recordedAt.month, 1);
-          break;
         case TimeRange.year:
-          key = DateTime(record.recordedAt.year, 1, 1);
+          // Cho "Năm": Nhóm theo tháng
+          key = DateTime(record.recordedAt.year, record.recordedAt.month, 1);
           break;
         case TimeRange.custom:
           key = DateTime(
@@ -108,13 +186,15 @@ class ChartService {
       }
 
       // Lấy giá trị mới nhất trong khoảng thời gian đó
-      if (!result.containsKey(key) || 
-          record.recordedAt.isAfter(
-            result.keys.firstWhere((k) => k == key, orElse: () => DateTime(1970)),
-          )) {
+      // Nếu key chưa tồn tại hoặc record này mới hơn record đã lưu, cập nhật
+      if (!keyToLatestRecord.containsKey(key) || 
+          record.recordedAt.isAfter(keyToLatestRecord[key]!)) {
         result[key] = record.weightKg;
+        keyToLatestRecord[key] = record.recordedAt;
       }
     }
+
+    // Không điền các ngày không có dữ liệu - chỉ hiển thị các ngày có dữ liệu
 
     return result;
   }

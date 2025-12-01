@@ -7,6 +7,7 @@ import 'core/services/notification_service.dart';
 import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firestore_activity_repository.dart';
 import 'data/repositories/firestore_goal_repository.dart';
+import 'data/repositories/firestore_gps_route_repository.dart';
 import 'data/repositories/firestore_streak_repository.dart';
 import 'data/repositories/firestore_user_profile_repository.dart';
 import 'data/repositories/firestore_weight_history_repository.dart';
@@ -20,6 +21,7 @@ import 'domain/repositories/activity_repository.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/goal_repository.dart';
 import 'domain/repositories/streak_repository.dart';
+import 'domain/repositories/gps_route_repository.dart';
 import 'domain/repositories/user_profile_repository.dart';
 import 'domain/repositories/weight_history_repository.dart';
 
@@ -63,6 +65,9 @@ class FitnessApp extends StatelessWidget {
         ),
         Provider<GoalRepository>(
           create: (_) => FirestoreGoalRepository(),
+        ),
+        Provider<GpsRouteRepository>(
+          create: (_) => FirestoreGpsRouteRepository(),
         ),
         ChangeNotifierProvider<AuthViewModel>(
           create: (context) => AuthViewModel(

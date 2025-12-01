@@ -128,41 +128,17 @@
   - Ưu tiên dữ liệu mới nhất
   - Hoặc merge nếu có thể
 
-### Phase 5: Xuất dữ liệu (PDF/Excel)
-- **5.1 Setup dependencies:**
-  - `pdf`: Tạo file PDF
-  - `excel`: Tạo file Excel
-  - `share_plus`: Chia sẻ file
-- **5.2 Tạo `ExportService`:**
-  - Method `exportToPDF(userId, dateRange)`: Xuất báo cáo PDF
-  - Method `exportToExcel(userId, dateRange)`: Xuất dữ liệu Excel
-- **5.3 Báo cáo PDF:**
-  - Header: Tên user, khoảng thời gian
-  - Tổng quan: Tổng quãng đường, kcal, thời gian
-  - Biểu đồ: Xu hướng cân nặng, quãng đường
-  - Chi tiết: Danh sách buổi tập
-  - Footer: Ngày xuất
-- **5.4 File Excel:**
-  - Sheet 1: Tổng quan
-  - Sheet 2: Chi tiết buổi tập
-  - Sheet 3: Lịch sử cân nặng
-  - Format: Có thể mở bằng Excel/Google Sheets
-- **5.5 Màn hình Export:**
-  - Chọn khoảng thời gian
-  - Chọn format: PDF hoặc Excel
-  - Nút "Xuất" và "Chia sẻ"
-
-### Phase 6: UI/UX và tối ưu
-- **6.1 Tối ưu GPS tracking:**
+### Phase 5: UI/UX và tối ưu
+- **5.1 Tối ưu GPS tracking:**
   - Cập nhật vị trí GPS mỗi 3-5 giây để thêm điểm vào segment hiện tại
   - Filter các điểm GPS không hợp lệ (loại bỏ điểm quá xa hoặc không hợp lý)
   - Tối ưu hiển thị polyline segments (smooth line, không quá nhiều điểm gây lag)
   - Giới hạn số điểm lưu vào Firestore: Mỗi segment tối đa 500-1000 điểm (nếu nhiều hơn, chỉ lưu mỗi điểm thứ N)
   - Khi pause/resume: Đảm bảo không nối các segment lại với nhau (tính quãng đường chính xác)
-- **6.2 Battery optimization:**
+- **5.2 Battery optimization:**
   - Sử dụng location accuracy phù hợp
   - Tắt GPS khi không cần
-- **6.3 Error handling:**
+- **5.3 Error handling:**
   - Xử lý khi GPS không khả dụng
   - Xử lý khi mất kết nối internet
   - Retry mechanism cho sync

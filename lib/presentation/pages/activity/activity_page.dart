@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'activity_history_tab.dart';
 import 'activity_selection_tab.dart';
+import 'gps_routes_tab.dart';
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key, this.initialTabIndex = 0});
@@ -77,7 +78,7 @@ class _ActivityPageState extends State<ActivityPage>
         children: const [
           ActivitySelectionTab(),
           ActivityHistoryTab(),
-          Center(child: Text('GPS Routes sẽ triển khai ở Plan 4.')),
+          GpsRoutesTab(),
         ],
       ),
     );

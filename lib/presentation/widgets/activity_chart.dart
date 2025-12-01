@@ -32,9 +32,53 @@ class ActivityChart extends StatelessWidget {
 
     final maxY = dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
     final minY = dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
-    final yInterval = (maxY - minY) / 5;
-    final adjustedMaxY = maxY + yInterval;
-    final adjustedMinY = (minY - yInterval).clamp(0, double.infinity);
+    final range = maxY - minY;
+    
+    // Điều chỉnh min/max với padding hợp lý để biểu đồ bắt đầu từ dưới
+    // Padding dưới lớn hơn một chút để biểu đồ không bắt đầu quá cao
+    final bottomPadding = range > 0 ? (range * 0.2).clamp(1.0, 5.0) : 2.0;
+    final topPadding = range > 0 ? (range * 0.1).clamp(0.5, 3.0) : 1.0;
+    final adjustedMaxY = maxY + topPadding;
+    final adjustedMinY = (minY - bottomPadding).clamp(0, double.infinity);
+    
+    // Tính interval động dựa trên range để có khoảng 5-8 labels, tránh quá nhiều labels
+    double yInterval;
+    if (range <= 0) {
+      yInterval = 1.0;
+    } else if (range < 10) {
+      // Range nhỏ: hiển thị đầy đủ (interval = 1)
+      yInterval = 1.0;
+    } else if (range < 30) {
+      // Range vừa: interval = 5
+      yInterval = 5.0;
+    } else if (range < 60) {
+      // Range lớn: interval = 10
+      yInterval = 10.0;
+    } else if (range < 100) {
+      // Range rất lớn: interval = 20
+      yInterval = 20.0;
+    } else {
+      // Range cực lớn: interval = 50
+      yInterval = 50.0;
+    }
+    
+    // Tính toán các giá trị sẽ hiển thị trên trục Y với interval đã tính
+    // Sử dụng Set để đảm bảo không có trùng lặp
+    final displayedYValues = <int>{};
+    final minInt = adjustedMinY.floor();
+    final maxInt = adjustedMaxY.ceil();
+    // Bắt đầu từ giá trị làm tròn xuống theo interval
+    final startValue = (minInt / yInterval).floor() * yInterval;
+    
+    // Tính toán tất cả các giá trị sẽ hiển thị
+    var currentValue = startValue;
+    while (currentValue <= maxInt + yInterval * 0.5) {
+      final roundedValue = currentValue.round();
+      displayedYValues.add(roundedValue);
+      currentValue += yInterval;
+      // Giới hạn để tránh vòng lặp vô hạn
+      if (displayedYValues.length > 50) break;
+    }
 
     return Container(
       height: 250,
@@ -63,16 +107,19 @@ class ActivityChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 30,
+                reservedSize: 35, // Tăng reservedSize để tránh bị đè
                 interval: dataPoints.length > 7 ? (dataPoints.length / 7).ceil().toDouble() : 1,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= dataPoints.length) return const Text('');
+                  if (value.toInt() >= dataPoints.length) return const SizedBox.shrink();
                   final date = dataPoints[value.toInt()].key;
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       getXAxisLabel(date),
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   );
                 },
@@ -82,11 +129,30 @@ class ActivityChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 50,
-                interval: yInterval > 0 ? yInterval : null,
+                interval: yInterval,
                 getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toDouble().toStringAsFixed(value < 10 ? 1 : 0),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  // Làm tròn về giá trị gần nhất theo interval
+                  final roundedValue = (value / yInterval).round() * yInterval;
+                  final intValue = roundedValue.round();
+                  
+                  // Chỉ hiển thị nếu giá trị này chính xác nằm trong displayedYValues
+                  // displayedYValues là Set nên không có trùng lặp
+                  if (!displayedYValues.contains(intValue)) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  // Định dạng số
+                  final formattedValue = intValue.toString();
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(
+                      formattedValue,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
                   );
                 },
               ),

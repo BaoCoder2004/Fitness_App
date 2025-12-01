@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../../domain/entities/activity_session.dart';
+import '../../../domain/entities/goal.dart';
 import '../../../domain/repositories/activity_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/goal_repository.dart';
+import '../../../core/helpers/activity_type_helper.dart';
 import '../../viewmodels/outdoor_tracking_view_model.dart';
 import '../../viewmodels/user_profile_view_model.dart';
 import 'activity_summary_page.dart';
@@ -51,16 +57,15 @@ class _OutdoorTrackingView extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(title: Text(activityName)),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
             children: [
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 28,
+                  vertical: 16,
                 ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary.withAlpha(20),
@@ -90,33 +95,45 @@ class _OutdoorTrackingView extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Icon(Icons.map_outlined,
-                        size: 42, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.map_outlined,
+                      size: 42,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              const SizedBox(height: 16),
+              _GpsMap(state: state),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  _MetricTile(
-                    label: 'Quãng đường',
-                    value: '${state.distanceKm.toStringAsFixed(2)} km',
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Quãng đường',
+                      value: '${state.distanceKm.toStringAsFixed(2)} km',
+                    ),
                   ),
-                  _MetricTile(
-                    label: 'Calories',
-                    value:
-                        '${_estimateCalories(state, userWeight).toStringAsFixed(0)} kcal',
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Calories',
+                      value:
+                          '${_estimateCalories(state, userWeight).toStringAsFixed(0)} kcal',
+                    ),
                   ),
-                  _MetricTile(
-                    label: 'Tốc độ/km',
-                    value: _formatPace(state),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Tốc độ TB',
+                      value: _formatAverageSpeed(state),
+                    ),
                   ),
                 ],
               ),
-              const Spacer(),
-              _buildControls(context, vm),
+              const SizedBox(height: 20),
+                // Card mục tiêu đã được bỏ theo yêu cầu
+                _buildControls(context, vm),
             ],
           ),
         ),
@@ -146,7 +163,7 @@ class _OutdoorTrackingView extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: state.hasStarted ? () => _finish(context) : null,
+            onPressed: state.hasStarted ? () => _handleFinishFlow(context) : null,
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             child: const Text('Hoàn thành'),
           ),
@@ -183,14 +200,14 @@ class _OutdoorTrackingView extends StatelessWidget {
     }
   }
 
-  Future<void> _finish(BuildContext context) async {
+  Future<void> _handleFinishFlow(BuildContext context) async {
     final vm = context.read<OutdoorTrackingViewModel>();
     vm.pause();
 
     final state = vm.state;
     final userWeight =
         context.read<UserProfileViewModel>().profile?.weightKg ?? 65.0;
-    final shouldSave = await showDialog<bool>(
+    final dialogResult = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
             title: const Text('Lưu buổi tập?'),
@@ -207,12 +224,18 @@ class _OutdoorTrackingView extends StatelessWidget {
               ),
             ],
           ),
-        ) ??
-        false;
+        );
+
+    if (dialogResult == null) {
+      vm.resume();
+      return;
+    }
 
     if (!context.mounted) return;
-    if (!shouldSave) {
-      vm.stop();
+    if (!dialogResult) {
+      // Xóa buổi tập: reset toàn bộ dữ liệu về 0 nhưng giữ nguyên màn hình hiện tại.
+      await vm.reset();
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã xóa buổi tập.')),
       );
@@ -221,6 +244,7 @@ class _OutdoorTrackingView extends StatelessWidget {
 
     final user = context.read<AuthRepository>().currentUser;
     if (user == null) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng đăng nhập lại.')),
       );
@@ -230,7 +254,7 @@ class _OutdoorTrackingView extends StatelessWidget {
     final session = ActivitySession(
       id: '',
       userId: user.uid,
-      activityType: activityName,
+      activityType: ActivityTypeHelper.resolve(activityName).key,
       date: DateTime.now(),
       durationSeconds: state.duration.inSeconds,
       calories: _estimateCalories(state, userWeight),
@@ -246,13 +270,92 @@ class _OutdoorTrackingView extends StatelessWidget {
         builder: (_) => ActivitySummaryPage(
           session: session,
           activityRepository: activityRepo,
+          gpsSegments: state.segments,
+          gpsTotalDistanceKm: state.distanceKm,
+          gpsActiveDurationSeconds: state.duration.inSeconds,
         ),
       ),
     );
 
+    await vm.stop();
+    await vm.stop();
     if (!context.mounted) return;
     if (saved == true) {
+      await _updateGoalProgress(
+        context: context,
+        session: session,
+      );
+    }
+    if (saved == true) {
       Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _updateGoalProgress({
+    required BuildContext context,
+    required ActivitySession session,
+  }) async {
+    try {
+      final goalRepo = context.read<GoalRepository>();
+      final goals = await goalRepo.fetchGoals(
+        userId: session.userId,
+        status: GoalStatus.active,
+      );
+      if (goals.isEmpty) return;
+
+      final resolvedActivityKey =
+          ActivityTypeHelper.resolve(session.activityType).key;
+
+      Goal? matchedGoal;
+      for (final goal in goals) {
+        final goalKey =
+            ActivityTypeHelper.resolve(goal.activityTypeFilter).key;
+        if (goalKey == resolvedActivityKey) {
+          matchedGoal = goal;
+          break;
+        }
+      }
+      matchedGoal ??= goals
+          .where((g) => g.activityTypeFilter == null)
+          .fold<Goal?>(null, (prev, g) {
+        if (prev == null) return g;
+        return g.startDate.isAfter(prev.startDate) ? g : prev;
+      });
+      matchedGoal ??= goals.reduce(
+        (a, b) => a.startDate.isAfter(b.startDate) ? a : b,
+      );
+
+      double increment = 0;
+      switch (matchedGoal.goalType) {
+        case GoalType.distance:
+          increment = session.distanceKm ?? 0;
+          break;
+        case GoalType.calories:
+          increment = session.calories;
+          break;
+        case GoalType.duration:
+          increment = session.durationSeconds / 60.0;
+          break;
+        case GoalType.weight:
+          increment = 0;
+          break;
+      }
+      if (increment <= 0) return;
+
+      final newCurrentValue = (matchedGoal.currentValue + increment)
+          .clamp(0, matchedGoal.targetValue);
+
+      final updatedGoal = matchedGoal.copyWith(
+        currentValue: newCurrentValue.toDouble(),
+        updatedAt: DateTime.now(),
+        status: newCurrentValue >= matchedGoal.targetValue
+            ? GoalStatus.completed
+            : matchedGoal.status,
+      );
+
+      await goalRepo.updateGoal(updatedGoal);
+    } catch (e) {
+      debugPrint('Failed to update goal progress: $e');
     }
   }
 
@@ -301,14 +404,271 @@ class _OutdoorTrackingView extends StatelessWidget {
     return kcalPerMin * durationMinutes;
   }
 
-  String _formatPace(OutdoorTrackingState state) {
-    if (state.distanceKm <= 0) {
-      return '--';
+  /// Hiển thị **tốc độ trung bình km/h** dựa trên `state.averageSpeed`.
+  /// - Nếu chưa di chuyển: hiển thị `0 km/h`.
+  /// - Khi đứng yên (quãng đường không tăng): tốc độ sẽ giảm dần về 0.
+  String _formatAverageSpeed(OutdoorTrackingState state) {
+    if (state.distanceKm <= 0 || state.duration.inSeconds == 0) {
+      return '0 km/h';
     }
-    final paceMinutes = state.duration.inSeconds / 60 / state.distanceKm;
-    final minutes = paceMinutes.floor();
-    final seconds = ((paceMinutes - minutes) * 60).round();
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+
+    final speed = state.averageSpeed;
+    if (speed.isNaN || speed.isInfinite) {
+      return '0 km/h';
+    }
+
+    // Nếu tốc độ rất nhỏ, coi như 0 để tránh hiển thị số lẻ khó hiểu.
+    if (speed.abs() < 0.1) {
+      return '0 km/h';
+    }
+
+    return '${speed.toStringAsFixed(2)} km/h';
+  }
+}
+
+class _GpsMap extends StatefulWidget {
+  const _GpsMap({required this.state});
+
+  final OutdoorTrackingState state;
+
+  @override
+  State<_GpsMap> createState() => _GpsMapState();
+}
+
+class _GpsMapState extends State<_GpsMap> {
+  late final MapController _mapController;
+  LatLng? _manualLocation;
+
+  @override
+  void didUpdateWidget(covariant _GpsMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldPoint = oldWidget.state.currentPoint?.position;
+    final newPoint = widget.state.currentPoint?.position;
+    if (newPoint != null &&
+        (oldPoint == null ||
+            oldPoint.latitude != newPoint.latitude ||
+            oldPoint.longitude != newPoint.longitude)) {
+      _mapController.move(newPoint, _mapController.camera.zoom);
+    }
+  }
+
+  Future<void> _moveToCurrentLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng bật GPS để định vị.')),
+        );
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Ứng dụng cần quyền truy cập vị trí.')),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hãy cấp quyền vị trí trong phần Cài đặt.'),
+          ),
+        );
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final latLng = LatLng(position.latitude, position.longitude);
+      _mapController.move(latLng, 16);
+      if (mounted) {
+        setState(() {
+          _manualLocation = latLng;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể xác định vị trí: $e')),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final start = widget.state.startPoint;
+    final current = widget.state.currentPoint;
+    final effectiveCurrent = current?.position ?? _manualLocation;
+    final centerLatLng =
+        effectiveCurrent ?? start?.position ?? const LatLng(21.0285, 105.8542);
+
+    final polylines = <Polyline>[];
+    for (final segment in widget.state.segments) {
+      if (segment.points.length < 2) continue;
+      polylines.add(
+        Polyline(
+          points: segment.points.map((p) => p.position).toList(),
+          strokeWidth: 4,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+
+    final markers = <Marker>[];
+    if (start != null) {
+      markers.add(
+        Marker(
+          width: 40,
+          height: 40,
+          point: start.position,
+          child: const Icon(
+            Icons.location_on,
+            color: Colors.blue,
+            size: 32,
+          ),
+        ),
+      );
+    }
+    if (effectiveCurrent != null) {
+      markers.add(
+        Marker(
+          width: 40,
+          height: 40,
+          point: effectiveCurrent,
+          child: const Icon(
+            Icons.my_location,
+            color: Colors.green,
+            size: 30,
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 320,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: centerLatLng,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.fitness_app',
+                ),
+                if (polylines.isNotEmpty)
+                  PolylineLayer(
+                    polylines: polylines,
+                  ),
+                if (markers.isNotEmpty)
+                  MarkerLayer(
+                    markers: markers.map((marker) {
+                      if (marker == markers.last &&
+                          marker.point == effectiveCurrent) {
+                        return Marker(
+                          width: 32,
+                          height: 32,
+                          point: marker.point,
+                          child: const _BlueDotMarker(),
+                        );
+                      }
+                      return marker;
+                    }).toList(),
+                  ),
+              ],
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Material(
+                color: Colors.white.withOpacity(0.9),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.my_location),
+                  onPressed: _moveToCurrentLocation,
+                ),
+              ),
+            ),
+            if (start == null && effectiveCurrent == null)
+              IgnorePointer(
+                ignoring: true,
+                child: Container(
+                  color: Colors.black.withOpacity(0.05),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const _BlueDotMarker(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Đang tìm vị trí GPS...',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BlueDotMarker extends StatelessWidget {
+  const _BlueDotMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color(0x332196F3),
+      ),
+      child: Center(
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF2196F3),
+          ),
+          child: Container(
+            margin: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -321,7 +681,6 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 110,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -335,7 +694,10 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(fontSize: 11),
           ),
           const SizedBox(height: 6),
           Text(
@@ -350,3 +712,4 @@ class _MetricTile extends StatelessWidget {
     );
   }
 }
+

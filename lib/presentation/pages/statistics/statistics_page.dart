@@ -10,6 +10,7 @@ import '../../../domain/entities/streak.dart';
 import '../../../domain/entities/user_profile.dart';
 import '../../../domain/repositories/activity_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/goal_repository.dart';
 import '../../../domain/repositories/streak_repository.dart';
 import '../../../domain/repositories/weight_history_repository.dart';
 import '../../viewmodels/statistics_view_model.dart';
@@ -30,6 +31,7 @@ class StatisticsPage extends StatelessWidget {
         authRepository: context.read<AuthRepository>(),
         activityRepository: context.read<ActivityRepository>(),
         weightHistoryRepository: context.read<WeightHistoryRepository>(),
+        goalRepository: context.read<GoalRepository>(),
         streakRepository: context.read<StreakRepository>(),
         notificationService: context.read<NotificationService>(),
       )..load(),
@@ -76,7 +78,12 @@ class _StatisticsContent extends StatelessWidget {
                         // Time range selector
                         _TimeRangeSelector(
                           selectedRange: vm.selectedRange,
+                          selectedDate: vm.selectedDate,
+                          availableWeeks: vm.availableWeeks,
+                          availableMonths: vm.availableMonths,
+                          availableYears: vm.availableYears,
                           onRangeChanged: vm.setRange,
+                          onDateChanged: vm.setSelectedDate,
                         ),
                         const SizedBox(height: 24),
                         // Metric selector
@@ -166,11 +173,21 @@ class _StatisticsContent extends StatelessWidget {
 class _TimeRangeSelector extends StatelessWidget {
   const _TimeRangeSelector({
     required this.selectedRange,
+    required this.selectedDate,
+    required this.availableWeeks,
+    required this.availableMonths,
+    required this.availableYears,
     required this.onRangeChanged,
+    required this.onDateChanged,
   });
 
   final TimeRange selectedRange;
+  final DateTime selectedDate;
+  final List<DateTime> availableWeeks;
+  final List<DateTime> availableMonths;
+  final List<DateTime> availableYears;
   final ValueChanged<TimeRange> onRangeChanged;
+  final ValueChanged<DateTime> onDateChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +229,148 @@ class _TimeRangeSelector extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        // Dropdown để chọn tuần/tháng/năm cụ thể
+        // Period dropdown (chỉ hiển thị khi không phải "Ngày")
+        if (selectedRange != TimeRange.day)
+          _PeriodDropdown(
+            selectedRange: selectedRange,
+            selectedDate: selectedDate,
+            availableWeeks: availableWeeks,
+            availableMonths: availableMonths,
+            availableYears: availableYears,
+            onDateChanged: onDateChanged,
+          ),
       ],
+    );
+  }
+}
+
+class _PeriodDropdown extends StatelessWidget {
+  const _PeriodDropdown({
+    required this.selectedRange,
+    required this.selectedDate,
+    required this.availableWeeks,
+    required this.availableMonths,
+    required this.availableYears,
+    required this.onDateChanged,
+  });
+
+  final TimeRange selectedRange;
+  final DateTime selectedDate;
+  final List<DateTime> availableWeeks;
+  final List<DateTime> availableMonths;
+  final List<DateTime> availableYears;
+  final ValueChanged<DateTime> onDateChanged;
+
+  String _formatWeek(DateTime monday) {
+    final sunday = monday.add(const Duration(days: 6));
+    return '${monday.day}/${monday.month}/${monday.year} - ${sunday.day}/${sunday.month}/${sunday.year}';
+  }
+
+  String _formatMonth(DateTime month) {
+    return '${month.month}/${month.year}';
+  }
+
+  String _formatYear(DateTime year) {
+    return '${year.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<DateTime> availablePeriods;
+    String Function(DateTime) formatter;
+    String? currentValue;
+
+    switch (selectedRange) {
+      case TimeRange.week:
+        availablePeriods = availableWeeks;
+        formatter = _formatWeek;
+        // Tìm tuần hiện tại được chọn
+        for (final week in availableWeeks) {
+          final weekEnd = week.add(const Duration(days: 6));
+          if (selectedDate.isAfter(week.subtract(const Duration(days: 1))) &&
+              selectedDate.isBefore(weekEnd.add(const Duration(days: 1)))) {
+            currentValue = formatter(week);
+            break;
+          }
+        }
+        if (currentValue == null && availableWeeks.isNotEmpty) {
+          currentValue = formatter(availableWeeks.first);
+        }
+        break;
+      case TimeRange.month:
+        availablePeriods = availableMonths;
+        formatter = _formatMonth;
+        // Tìm tháng hiện tại được chọn
+        for (final month in availableMonths) {
+          if (selectedDate.year == month.year && selectedDate.month == month.month) {
+            currentValue = formatter(month);
+            break;
+          }
+        }
+        if (currentValue == null && availableMonths.isNotEmpty) {
+          currentValue = formatter(availableMonths.first);
+        }
+        break;
+      case TimeRange.year:
+        availablePeriods = availableYears;
+        formatter = _formatYear;
+        // Tìm năm hiện tại được chọn
+        for (final year in availableYears) {
+          if (selectedDate.year == year.year) {
+            currentValue = formatter(year);
+            break;
+          }
+        }
+        if (currentValue == null && availableYears.isNotEmpty) {
+          currentValue = formatter(availableYears.first);
+        }
+        break;
+      case TimeRange.day:
+      case TimeRange.custom:
+        return const SizedBox.shrink();
+    }
+
+    if (availablePeriods.isEmpty) {
+      return Text(
+        'Chưa có dữ liệu',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      value: currentValue,
+      decoration: InputDecoration(
+        labelText: selectedRange == TimeRange.week
+            ? 'Chọn tuần'
+            : selectedRange == TimeRange.month
+                ? 'Chọn tháng'
+                : 'Chọn năm',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      ),
+      items: availablePeriods.map((period) {
+        final label = formatter(period);
+        return DropdownMenuItem<String>(
+          value: label,
+          child: Text(label),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        // Tìm DateTime tương ứng với value được chọn
+        for (final period in availablePeriods) {
+          if (formatter(period) == value) {
+            onDateChanged(period);
+            break;
+          }
+        }
+      },
     );
   }
 }
@@ -309,8 +467,9 @@ class _SummaryStats extends StatelessWidget {
 
     final total = dataPoints.map((e) => e.value).reduce((a, b) => a + b);
     final average = total / dataPoints.length;
-    final max = dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    final min = dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
+    // Sử dụng maxValue và minValue từ viewModel để lấy giá trị chính xác từ dữ liệu gốc
+    final max = viewModel.maxValue ?? dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final min = viewModel.minValue ?? dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),

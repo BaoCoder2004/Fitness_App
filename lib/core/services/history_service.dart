@@ -27,8 +27,9 @@ class HistoryService {
     required TimeRange range,
     DateTime? customStart,
     DateTime? customEnd,
+    DateTime? referenceDate, // Ngày tham chiếu (mặc định là hôm nay)
   }) async {
-    final now = DateTime.now();
+    final now = referenceDate ?? DateTime.now();
     DateTime start;
     DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
@@ -125,9 +126,25 @@ class HistoryService {
     final allRecords = await _weightHistoryRepository
         .watchRecords(userId)
         .first;
+    
+    // Normalize start và end về đầu ngày và cuối ngày
+    final startDate = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day);
+    
     return allRecords.where((record) {
-      return record.recordedAt.isAfter(start.subtract(const Duration(days: 1))) &&
-          record.recordedAt.isBefore(end.add(const Duration(days: 1)));
+      // Normalize record date về đầu ngày để so sánh
+      final recordDate = DateTime(
+        record.recordedAt.year,
+        record.recordedAt.month,
+        record.recordedAt.day,
+      );
+      
+      // Chỉ lấy dữ liệu trong khoảng từ startDate đến endDate (bao gồm cả 2 ngày)
+      final isInRange = recordDate.isAtSameMomentAs(startDate) || 
+                       recordDate.isAtSameMomentAs(endDate) ||
+                       (recordDate.isAfter(startDate) && recordDate.isBefore(endDate));
+      
+      return isInRange;
     }).toList();
   }
 
@@ -180,6 +197,74 @@ class HistoryService {
     }
     
     return result;
+  }
+
+  /// Lấy danh sách các tuần có dữ liệu
+  Future<List<DateTime>> getAvailableWeeks(String userId) async {
+    final activities = await getAllActivities(userId);
+    if (activities.isEmpty) return [];
+
+    final weekSet = <String>{};
+    final weeks = <DateTime>[];
+
+    for (final activity in activities) {
+      // Tính thứ 2 của tuần chứa activity này
+      final weekday = activity.date.weekday;
+      final daysToSubtract = weekday == 1 ? 0 : weekday - 1;
+      final monday = activity.date.subtract(Duration(days: daysToSubtract));
+      final weekKey = '${monday.year}-${monday.month}-${monday.day}';
+      
+      if (!weekSet.contains(weekKey)) {
+        weekSet.add(weekKey);
+        weeks.add(DateTime(monday.year, monday.month, monday.day));
+      }
+    }
+
+    // Sắp xếp từ mới nhất đến cũ nhất
+    weeks.sort((a, b) => b.compareTo(a));
+    return weeks;
+  }
+
+  /// Lấy danh sách các tháng có dữ liệu
+  Future<List<DateTime>> getAvailableMonths(String userId) async {
+    final activities = await getAllActivities(userId);
+    if (activities.isEmpty) return [];
+
+    final monthSet = <String>{};
+    final months = <DateTime>[];
+
+    for (final activity in activities) {
+      final monthKey = '${activity.date.year}-${activity.date.month}';
+      
+      if (!monthSet.contains(monthKey)) {
+        monthSet.add(monthKey);
+        months.add(DateTime(activity.date.year, activity.date.month, 1));
+      }
+    }
+
+    // Sắp xếp từ mới nhất đến cũ nhất
+    months.sort((a, b) => b.compareTo(a));
+    return months;
+  }
+
+  /// Lấy danh sách các năm có dữ liệu
+  Future<List<DateTime>> getAvailableYears(String userId) async {
+    final activities = await getAllActivities(userId);
+    if (activities.isEmpty) return [];
+
+    final yearSet = <int>{};
+    final years = <DateTime>[];
+
+    for (final activity in activities) {
+      if (!yearSet.contains(activity.date.year)) {
+        yearSet.add(activity.date.year);
+        years.add(DateTime(activity.date.year, 1, 1));
+      }
+    }
+
+    // Sắp xếp từ mới nhất đến cũ nhất
+    years.sort((a, b) => b.compareTo(a));
+    return years;
   }
 }
 
