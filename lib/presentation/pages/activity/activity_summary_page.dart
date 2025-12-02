@@ -14,6 +14,11 @@ import '../../../domain/repositories/activity_repository.dart';
 import '../../../domain/repositories/gps_route_repository.dart';
 import '../../../domain/repositories/goal_repository.dart';
 
+enum ActivitySummaryResult {
+  saved,
+  cancelled,
+}
+
 class ActivitySummaryPage extends StatefulWidget {
   const ActivitySummaryPage({
     super.key,
@@ -121,8 +126,10 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed:
-                                _saving ? null : () => Navigator.of(context).pop(false),
+                            onPressed: _saving
+                                ? null
+                                : () => Navigator.of(context)
+                                    .pop(ActivitySummaryResult.cancelled),
                             child: const Text('Hủy'),
                           ),
                         ),
@@ -323,7 +330,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã lưu buổi tập.')),
       );
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(ActivitySummaryResult.saved);
     } catch (e) {
       setState(() => _saving = false);
       if (!mounted) return;

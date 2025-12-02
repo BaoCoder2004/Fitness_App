@@ -418,34 +418,69 @@ class _IndoorTrackingViewState extends State<_IndoorTrackingView> {
 
   Future<void> _finish(BuildContext context) async {
     final vm = context.read<IndoorTrackingViewModel>();
-    // Lưu heartRate trước khi finish() vì finish() sẽ reset về null
+    final wasRunning = vm.isRunning;
+    vm.pause();
+
     final heartRate = vm.heartRate;
-    final result = vm.finish();
-    final heartRateText = heartRate != null
-        ? '\nNhịp tim TB: $heartRate bpm'
-        : '';
-    final shouldSave = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Lưu buổi tập?'),
-            content: Text(
-                'Thời gian: ${result.duration.inMinutes} phút\nKcal: ${result.calories.toStringAsFixed(1)}$heartRateText'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Xóa'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Lưu'),
-              ),
-            ],
+    final snapshot = vm.snapshot();
+    final heartRateText =
+        heartRate != null ? '\nNhịp tim TB: $heartRate bpm' : '';
+    final dialogResult = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lưu buổi tập?'),
+        content: Text(
+          'Thời gian: ${snapshot.duration.inMinutes} phút\nKcal: ${snapshot.calories.toStringAsFixed(1)}$heartRateText',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Xóa'),
           ),
-        ) ??
-        false;
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
 
     if (!context.mounted) return;
-    if (!shouldSave) return;
+    if (dialogResult == null) {
+      if (wasRunning) vm.resume();
+      return;
+    }
+    if (!dialogResult) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Xóa buổi tập?'),
+          content: const Text(
+            'Toàn bộ dữ liệu vừa ghi lại sẽ bị mất. Bạn có chắc chắn muốn xóa?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Không'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        ),
+      );
+      if (!context.mounted) return;
+      if (confirmed != true) {
+        if (wasRunning) vm.resume();
+        return;
+      }
+      vm.resetSession();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xóa buổi tập.')),
+      );
+      return;
+    }
 
     final authRepo = context.read<AuthRepository>();
     final activityRepo = context.read<ActivityRepository>();
@@ -462,16 +497,17 @@ class _IndoorTrackingViewState extends State<_IndoorTrackingView> {
       userId: user.uid,
       activityType: widget.workoutType.id,
       date: DateTime.now(),
-      durationSeconds: result.duration.inSeconds,
-      calories: result.calories,
+      durationSeconds: snapshot.duration.inSeconds,
+      calories: snapshot.calories,
       distanceKm: null,
       averageSpeed: null,
-      notes: result.note,
+      notes: snapshot.note,
       averageHeartRate: heartRate,
       createdAt: DateTime.now(),
     );
 
-    final saved = await Navigator.of(context).push<bool>(
+    final summaryResult =
+        await Navigator.of(context).push<ActivitySummaryResult>(
       MaterialPageRoute(
         builder: (_) => ActivitySummaryPage(
           session: session,
@@ -481,8 +517,11 @@ class _IndoorTrackingViewState extends State<_IndoorTrackingView> {
     );
 
     if (!context.mounted) return;
-    if (saved == true) {
+    if (summaryResult == ActivitySummaryResult.saved) {
+      vm.resetSession();
       Navigator.of(context).pop();
+    } else if (wasRunning) {
+      vm.resume();
     }
   }
 }

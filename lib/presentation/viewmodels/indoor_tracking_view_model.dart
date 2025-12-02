@@ -72,20 +72,22 @@ class IndoorTrackingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  IndoorTrackingResult finish() {
-    _timer?.cancel();
-    _isRunning = false;
-    final result = IndoorTrackingResult(
+  IndoorTrackingResult snapshot() {
+    return IndoorTrackingResult(
       duration: _activeDuration,
       calories: calories,
       note: _note,
     );
+  }
+
+  void resetSession() {
+    _timer?.cancel();
+    _isRunning = false;
     _hasStarted = false;
     _activeDuration = Duration.zero;
     _note = null;
     _heartRate = null;
     notifyListeners();
-    return result;
   }
 
   void _startTimer() {

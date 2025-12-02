@@ -202,6 +202,7 @@ class _OutdoorTrackingView extends StatelessWidget {
 
   Future<void> _handleFinishFlow(BuildContext context) async {
     final vm = context.read<OutdoorTrackingViewModel>();
+    final wasTrackingBeforeFinish = vm.state.isTracking;
     vm.pause();
 
     final state = vm.state;
@@ -233,7 +234,14 @@ class _OutdoorTrackingView extends StatelessWidget {
 
     if (!context.mounted) return;
     if (!dialogResult) {
-      // Xóa buổi tập: reset toàn bộ dữ liệu về 0 nhưng giữ nguyên màn hình hiện tại.
+      final confirmed = await _confirmDiscardSession(context);
+      if (!context.mounted) return;
+      if (!confirmed) {
+        if (wasTrackingBeforeFinish) {
+          vm.resume();
+        }
+        return;
+      }
       await vm.reset();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -265,7 +273,8 @@ class _OutdoorTrackingView extends StatelessWidget {
     );
 
     final activityRepo = context.read<ActivityRepository>();
-    final saved = await Navigator.of(context).push<bool>(
+    final summaryResult = await Navigator.of(context)
+        .push<ActivitySummaryResult>(
       MaterialPageRoute(
         builder: (_) => ActivitySummaryPage(
           session: session,
@@ -277,18 +286,47 @@ class _OutdoorTrackingView extends StatelessWidget {
       ),
     );
 
-    await vm.stop();
-    await vm.stop();
     if (!context.mounted) return;
-    if (saved == true) {
+
+    if (summaryResult == ActivitySummaryResult.saved) {
+      await vm.stop();
+      if (!context.mounted) return;
       await _updateGoalProgress(
         context: context,
         session: session,
       );
-    }
-    if (saved == true) {
+      if (!context.mounted) return;
       Navigator.of(context).pop();
+      return;
     }
+
+    // User cancelled summary -> resume tracking with current progress intact.
+    if (wasTrackingBeforeFinish) {
+      await vm.resume();
+    }
+  }
+
+  Future<bool> _confirmDiscardSession(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Xóa buổi tập?'),
+        content: const Text(
+          'Toàn bộ dữ liệu vừa ghi lại sẽ bị mất. Bạn có chắc chắn muốn xóa?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Không'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _updateGoalProgress({
