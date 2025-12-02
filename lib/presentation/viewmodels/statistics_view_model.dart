@@ -302,7 +302,7 @@ class StatisticsViewModel extends ChangeNotifier {
     // Load weight records
     final now = _selectedDate;
     DateTime start;
-    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    DateTime end;
 
     switch (_selectedRange) {
       case TimeRange.day:
@@ -322,15 +322,17 @@ class StatisticsViewModel extends ChangeNotifier {
         end = DateTime(end.year, end.month, end.day, 23, 59, 59);
         break;
       case TimeRange.month:
-        // Cho "Tháng": Lấy từ đầu tháng, nhưng nếu tuần đầu bắt đầu từ tháng trước thì lấy luôn
+        // Cho "Tháng": Lấy trọn tháng được chọn
         start = DateTime(now.year, now.month, 1);
-        // Tính đầu tuần của ngày đầu tháng
-        final firstDayWeekday = start.weekday;
-        final weekStartOfFirstDay = start.subtract(Duration(days: firstDayWeekday - 1));
-        // Nếu tuần đầu bắt đầu từ tháng trước, lấy từ đó
-        if (weekStartOfFirstDay.isBefore(start)) {
-          start = weekStartOfFirstDay;
-        }
+        final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+        end = DateTime(
+          lastDayOfMonth.year,
+          lastDayOfMonth.month,
+          lastDayOfMonth.day,
+          23,
+          59,
+          59,
+        );
         break;
       case TimeRange.year:
         start = DateTime(now.year, 1, 1);
@@ -338,6 +340,7 @@ class StatisticsViewModel extends ChangeNotifier {
         break;
       case TimeRange.custom:
         start = DateTime(now.year - 1, 1, 1);
+        end = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
     }
 
@@ -371,7 +374,7 @@ class StatisticsViewModel extends ChangeNotifier {
       // Update weight records and chart if needed
       final now = _selectedDate;
       DateTime start;
-      DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      DateTime end;
 
       switch (_selectedRange) {
         case TimeRange.day:
@@ -391,15 +394,17 @@ class StatisticsViewModel extends ChangeNotifier {
           end = DateTime(end.year, end.month, end.day, 23, 59, 59);
           break;
         case TimeRange.month:
-          // Cho "Tháng": Lấy từ đầu tháng, nhưng nếu tuần đầu bắt đầu từ tháng trước thì lấy luôn
+          // Cho "Tháng": Lấy trọn tháng được chọn
           start = DateTime(now.year, now.month, 1);
-          // Tính đầu tuần của ngày đầu tháng
-          final firstDayWeekday = start.weekday;
-          final weekStartOfFirstDay = start.subtract(Duration(days: firstDayWeekday - 1));
-          // Nếu tuần đầu bắt đầu từ tháng trước, lấy từ đó
-          if (weekStartOfFirstDay.isBefore(start)) {
-            start = weekStartOfFirstDay;
-          }
+          final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+          end = DateTime(
+            lastDayOfMonth.year,
+            lastDayOfMonth.month,
+            lastDayOfMonth.day,
+            23,
+            59,
+            59,
+          );
           break;
         case TimeRange.year:
           start = DateTime(now.year, 1, 1);
@@ -407,6 +412,7 @@ class StatisticsViewModel extends ChangeNotifier {
           break;
         case TimeRange.custom:
           start = DateTime(now.year - 1, 1, 1);
+          end = DateTime(now.year, now.month, now.day, 23, 59, 59);
           break;
       }
 
@@ -766,4 +772,5 @@ class StatisticsViewModel extends ChangeNotifier {
     _weightSub?.cancel();
     super.dispose();
   }
+
 }

@@ -202,18 +202,35 @@ class HistoryService {
   /// Lấy danh sách các tuần có dữ liệu
   Future<List<DateTime>> getAvailableWeeks(String userId) async {
     final activities = await getAllActivities(userId);
-    if (activities.isEmpty) return [];
+    final weightRecords =
+        await _weightHistoryRepository.watchRecords(userId).first;
+    if (activities.isEmpty && weightRecords.isEmpty) return [];
 
     final weekSet = <String>{};
     final weeks = <DateTime>[];
 
+    // Weeks từ activity sessions
     for (final activity in activities) {
-      // Tính thứ 2 của tuần chứa activity này
       final weekday = activity.date.weekday;
       final daysToSubtract = weekday == 1 ? 0 : weekday - 1;
       final monday = activity.date.subtract(Duration(days: daysToSubtract));
       final weekKey = '${monday.year}-${monday.month}-${monday.day}';
-      
+
+      if (!weekSet.contains(weekKey)) {
+        weekSet.add(weekKey);
+        weeks.add(DateTime(monday.year, monday.month, monday.day));
+      }
+    }
+
+    // Weeks từ weight records (để thống kê cân nặng vẫn có dữ liệu
+    // ngay cả khi không có buổi tập)
+    for (final record in weightRecords) {
+      final date = record.recordedAt;
+      final weekday = date.weekday;
+      final daysToSubtract = weekday == 1 ? 0 : weekday - 1;
+      final monday = date.subtract(Duration(days: daysToSubtract));
+      final weekKey = '${monday.year}-${monday.month}-${monday.day}';
+
       if (!weekSet.contains(weekKey)) {
         weekSet.add(weekKey);
         weeks.add(DateTime(monday.year, monday.month, monday.day));
@@ -228,17 +245,31 @@ class HistoryService {
   /// Lấy danh sách các tháng có dữ liệu
   Future<List<DateTime>> getAvailableMonths(String userId) async {
     final activities = await getAllActivities(userId);
-    if (activities.isEmpty) return [];
+    final weightRecords =
+        await _weightHistoryRepository.watchRecords(userId).first;
+    if (activities.isEmpty && weightRecords.isEmpty) return [];
 
     final monthSet = <String>{};
     final months = <DateTime>[];
 
+    // Months từ activity sessions
     for (final activity in activities) {
       final monthKey = '${activity.date.year}-${activity.date.month}';
-      
+
       if (!monthSet.contains(monthKey)) {
         monthSet.add(monthKey);
         months.add(DateTime(activity.date.year, activity.date.month, 1));
+      }
+    }
+
+    // Months từ weight records
+    for (final record in weightRecords) {
+      final date = record.recordedAt;
+      final monthKey = '${date.year}-${date.month}';
+
+      if (!monthSet.contains(monthKey)) {
+        monthSet.add(monthKey);
+        months.add(DateTime(date.year, date.month, 1));
       }
     }
 
@@ -250,15 +281,27 @@ class HistoryService {
   /// Lấy danh sách các năm có dữ liệu
   Future<List<DateTime>> getAvailableYears(String userId) async {
     final activities = await getAllActivities(userId);
-    if (activities.isEmpty) return [];
+    final weightRecords =
+        await _weightHistoryRepository.watchRecords(userId).first;
+    if (activities.isEmpty && weightRecords.isEmpty) return [];
 
     final yearSet = <int>{};
     final years = <DateTime>[];
 
+    // Years từ activity sessions
     for (final activity in activities) {
       if (!yearSet.contains(activity.date.year)) {
         yearSet.add(activity.date.year);
         years.add(DateTime(activity.date.year, 1, 1));
+      }
+    }
+
+    // Years từ weight records
+    for (final record in weightRecords) {
+      final year = record.recordedAt.year;
+      if (!yearSet.contains(year)) {
+        yearSet.add(year);
+        years.add(DateTime(year, 1, 1));
       }
     }
 

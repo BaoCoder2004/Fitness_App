@@ -332,12 +332,14 @@ class _PeriodDropdown extends StatelessWidget {
         return const SizedBox.shrink();
     }
 
+    // Nếu không có period nào, hiển thị thông báo "Chưa có dữ liệu"
     if (availablePeriods.isEmpty) {
       return Text(
         'Chưa có dữ liệu',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-        ),
+              color:
+                  Theme.of(context).colorScheme.onSurface.withAlpha(153),
+            ),
       );
     }
 
