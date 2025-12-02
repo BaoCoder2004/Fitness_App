@@ -201,7 +201,9 @@ class GpsTrackingService {
     _positionSub?.cancel();
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
+        // Sử dụng high thay vì best để tiết kiệm pin
+        // Vẫn đủ chính xác cho tracking nhưng không tốn pin quá nhiều
+        accuracy: LocationAccuracy.high,
         // Chỉ nhận điểm mới khi thay đổi vị trí đủ lớn để coi là di chuyển.
         distanceFilter: 10,
       ),

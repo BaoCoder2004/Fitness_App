@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -153,79 +155,185 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
   Future<void> _save() async {
     setState(() => _saving = true);
 
-    final updatedSession = ActivitySession(
-      id: widget.session.id,
-      userId: widget.session.userId,
-      activityType: widget.session.activityType,
-      date: widget.session.date,
-      durationSeconds: _durationSeconds,
-      calories: widget.session.calories,
-      distanceKm: widget.session.distanceKm,
-      averageSpeed: widget.session.averageSpeed,
-      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-      averageHeartRate: widget.session.averageHeartRate,
-      createdAt: widget.session.createdAt,
-    );
-
-    // Lưu activity trước để lấy activityId thực tế (Firestore auto id)
-    await widget.activityRepository.saveSession(updatedSession);
-    if (!mounted) return;
-
-    // Lấy lại buổi tập mới nhất để biết id (phục vụ liên kết với gps_routes)
-    final latestSession =
-        await widget.activityRepository.fetchMostRecentActivity(
-      updatedSession.userId,
-    );
-    final activityId = latestSession?.id.isNotEmpty == true
-        ? latestSession!.id
-        : updatedSession.id;
-
-    // Nếu có dữ liệu GPS thì lưu route vào collection gps_routes
-    if (widget.gpsSegments != null &&
-        widget.gpsSegments!.isNotEmpty &&
-        widget.gpsTotalDistanceKm != null &&
-        widget.gpsActiveDurationSeconds != null) {
-      final gpsRepo = context.read<GpsRouteRepository>();
-
-      final routeSegments = widget.gpsSegments!
-          .map<GpsRouteSegment>(
-            (s) => GpsRouteSegment(
-              points: s.points
-                  .map(
-                    (p) => GpsRoutePoint(
-                      lat: p.position.latitude,
-                      lng: p.position.longitude,
-                      timestamp: p.timestamp,
-                    ),
-                  )
-                  .toList(),
-              startTime: s.startTime,
-              endTime: s.endTime,
-            ),
-          )
-          .toList();
-
-      final route = GpsRoute(
-        id: '',
-        userId: updatedSession.userId,
-        activityId: activityId,
-        segments: routeSegments,
-        totalDistanceKm: widget.gpsTotalDistanceKm!,
-        totalDurationSeconds: widget.gpsActiveDurationSeconds!,
-        createdAt: DateTime.now(),
+    try {
+      final updatedSession = ActivitySession(
+        id: widget.session.id,
+        userId: widget.session.userId,
+        activityType: widget.session.activityType,
+        date: widget.session.date,
+        durationSeconds: _durationSeconds,
+        calories: widget.session.calories,
+        distanceKm: widget.session.distanceKm,
+        averageSpeed: widget.session.averageSpeed,
+        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        averageHeartRate: widget.session.averageHeartRate,
+        createdAt: widget.session.createdAt,
       );
 
-      await gpsRepo.saveRoute(route);
+      // Lưu activity trước
+      await widget.activityRepository.saveSession(updatedSession);
+      if (!mounted) {
+        setState(() => _saving = false);
+        return;
+      }
+
+      // QUAN TRỌNG: Lấy ID thực tế từ Firestore sau khi save
+      // Nếu session.id là empty hoặc offline ID, Firestore sẽ generate ID mới
+      // Cần fetch lại activity mới nhất để lấy ID thực tế
+      String activityId = updatedSession.id;
+      
+      // Nếu offline, dùng offline ID (sync service sẽ update sau khi có mạng)
+      // Khi offline, activityId sẽ là offline ID, sync handler sẽ update GPS route sau
+      if (activityId.isEmpty || activityId.startsWith('offline_')) {
+        try {
+          // Fetch activities trong cùng ngày để tìm activity vừa save
+          final startOfDay = DateTime(
+            updatedSession.date.year,
+            updatedSession.date.month,
+            updatedSession.date.day,
+          );
+          final endOfDay = startOfDay.add(const Duration(days: 1));
+          
+          final activitiesInDay = await widget.activityRepository.getActivitiesInRange(
+            userId: updatedSession.userId,
+            start: startOfDay,
+            end: endOfDay,
+          );
+          
+          // Tìm activity match: cùng date (chính xác), duration, activityType, calories
+          // QUAN TRỌNG: Tìm activity gần nhất về thời gian với updatedSession.date
+          ActivitySession? matchingActivity;
+          Duration? bestTimeDiff;
+          
+          for (final a in activitiesInDay) {
+            // Match date (chính xác đến phút)
+            final sameDate = a.date.year == updatedSession.date.year &&
+                a.date.month == updatedSession.date.month &&
+                a.date.day == updatedSession.date.day &&
+                a.date.hour == updatedSession.date.hour &&
+                a.date.minute == updatedSession.date.minute;
+            if (!sameDate) continue;
+            
+            // Match duration (trong vòng 5 giây)
+            final sameDuration = (a.durationSeconds - updatedSession.durationSeconds).abs() <= 5;
+            if (!sameDuration) continue;
+            
+            // Match activityType
+            final sameType = a.activityType == updatedSession.activityType;
+            if (!sameType) continue;
+            
+            // Match calories (trong vòng 5 calories) để chắc chắn hơn
+            final sameCalories = (a.calories - updatedSession.calories).abs() <= 5;
+            if (!sameCalories) continue;
+            
+            // Tính thời gian chênh lệch
+            final timeDiff = (a.date.difference(updatedSession.date)).abs();
+            
+            // Chọn activity có thời gian gần nhất
+            if (matchingActivity == null || bestTimeDiff == null || timeDiff < bestTimeDiff) {
+              matchingActivity = a;
+              bestTimeDiff = timeDiff;
+            }
+          }
+          
+          if (matchingActivity != null) {
+            activityId = matchingActivity.id;
+            print('Found saved activity with ID: $activityId (date: ${matchingActivity.date}, type: ${matchingActivity.activityType}, duration: ${matchingActivity.durationSeconds}s)');
+          } else {
+            print('Warning: Could not find matching activity after save. Will use offline ID and let sync service handle it.');
+            print('  Looking for: date=${updatedSession.date}, type=${updatedSession.activityType}, duration=${updatedSession.durationSeconds}s, calories=${updatedSession.calories}');
+            print('  Found ${activitiesInDay.length} activities in day');
+            // KHÔNG dùng most recent fallback vì có thể link sai với activity khác
+            // Nếu không tìm thấy, giữ nguyên offline ID, sync service sẽ xử lý khi sync
+          }
+        } catch (e) {
+          print('Warning: Could not fetch most recent activity: $e');
+          // Fallback: vẫn dùng ID cũ (có thể là offline ID, sync service sẽ xử lý)
+        }
+      }
+
+      // Nếu có dữ liệu GPS thì lưu route vào collection gps_routes
+      if (widget.gpsSegments != null &&
+          widget.gpsSegments!.isNotEmpty &&
+          widget.gpsTotalDistanceKm != null &&
+          widget.gpsActiveDurationSeconds != null) {
+        try {
+          final gpsRepo = context.read<GpsRouteRepository>();
+
+          final routeSegments = widget.gpsSegments!
+              .map<GpsRouteSegment>(
+                (s) => GpsRouteSegment(
+                  points: s.points
+                      .map(
+                        (p) => GpsRoutePoint(
+                          lat: p.position.latitude,
+                          lng: p.position.longitude,
+                          timestamp: p.timestamp,
+                        ),
+                      )
+                      .toList(),
+                  startTime: s.startTime,
+                  endTime: s.endTime,
+                ),
+              )
+              .toList();
+
+          // Sử dụng thời gian bắt đầu từ segment đầu tiên thay vì DateTime.now()
+          // Điều này giúp matching chính xác hơn với activity date
+          final routeStartTime = routeSegments.isNotEmpty 
+              ? routeSegments.first.startTime 
+              : updatedSession.date;
+          
+          final route = GpsRoute(
+            id: '',
+            userId: updatedSession.userId,
+            activityId: activityId,
+            segments: routeSegments,
+            totalDistanceKm: widget.gpsTotalDistanceKm!,
+            totalDurationSeconds: widget.gpsActiveDurationSeconds!,
+            createdAt: routeStartTime,
+          );
+
+          // Save GPS route
+          await gpsRepo.saveRoute(route);
+        } catch (e) {
+          // Log lỗi nhưng vẫn tiếp tục (GPS route có thể được sync sau)
+          print('Warning: Could not save GPS route: $e');
+        }
+      }
+
+      if (!mounted) {
+        setState(() => _saving = false);
+        return;
+      }
+
+      // Check goal completions (không block nếu lỗi)
+      try {
+        await _checkGoalCompletions(updatedSession);
+      } catch (e) {
+        print('Warning: Could not check goal completions: $e');
+      }
+
+      if (!mounted) {
+        setState(() => _saving = false);
+        return;
+      }
+
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã lưu buổi tập.')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      setState(() => _saving = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi khi lưu buổi tập: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-
-    if (!mounted) return;
-    await _checkGoalCompletions(updatedSession);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã lưu buổi tập.')),
-    );
-    Navigator.of(context).pop(true);
   }
 
   Future<void> _checkGoalCompletions(ActivitySession session) async {
@@ -240,6 +348,11 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
       );
       final goals = allGoals.where((g) => g.status == GoalStatus.active).toList();
       if (goals.isEmpty) return;
+      
+      final resolvedActivityKey =
+          ActivityTypeHelper.resolve(session.activityType).key;
+      
+      // Update TẤT CẢ goals phù hợp (không chỉ check completion)
       for (final goal in goals) {
         if (goal.goalType == GoalType.weight) continue;
         if (session.date.isBefore(goal.startDate)) continue;
@@ -251,6 +364,25 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
             continue; // đã quá hạn thì không tính cho mục tiêu này
           }
         }
+        
+        // Check xem ngày của activity có nằm trong timeframe của goal không
+        if (!_isDateInGoalTimeFrame(session.date, goal)) {
+          continue; // Ngày không nằm trong timeframe của goal
+        }
+        
+        // Check activity type match
+        bool activityMatch = false;
+        if (goal.activityTypeFilter == null || goal.activityTypeFilter!.isEmpty) {
+          // Goal không filter activity type -> match tất cả
+          activityMatch = true;
+        } else {
+          final goalKey =
+              ActivityTypeHelper.resolve(goal.activityTypeFilter).key;
+          activityMatch = goalKey == resolvedActivityKey;
+        }
+        
+        if (!activityMatch) continue;
+        
         double increment = 0;
         switch (goal.goalType) {
           case GoalType.distance:
@@ -266,23 +398,86 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
             break;
         }
         if (increment <= 0) continue;
-        final newCurrent = goal.currentValue + increment;
-        if (newCurrent + 1e-6 < goal.targetValue) continue;
+        
+        // Skip nếu goal đã completed và currentValue đã đạt target (không cần update nữa)
+        final wasCompleted = goal.status == GoalStatus.completed;
+        if (wasCompleted && goal.currentValue >= goal.targetValue) {
+          // Goal đã completed, không cần update nữa
+          continue;
+        }
+        
+        // Update progress cho TẤT CẢ goals phù hợp (không chỉ khi đạt target)
+        final newCurrent = (goal.currentValue + increment)
+            .clamp(0.0, goal.targetValue)
+            .toDouble();
+        
+        final isNowCompleted = newCurrent >= goal.targetValue;
+        
         final updatedGoal = goal.copyWith(
           currentValue: newCurrent,
-          status: GoalStatus.completed,
+          status: isNowCompleted ? GoalStatus.completed : goal.status,
           updatedAt: DateTime.now(),
         );
         await goalRepository.updateGoal(updatedGoal);
-        // Lấy tên hiển thị: ưu tiên activity type, nếu không có thì dùng goal type
-        final goalDisplayName = goal.activityTypeFilter != null && goal.activityTypeFilter!.isNotEmpty
-            ? ActivityTypeHelper.resolve(goal.activityTypeFilter).displayName
-            : goal.goalType.displayName;
-        await notificationService.showGoalCompletedNotification(goalDisplayName);
+        
+        // Gửi notification nếu goal vừa đạt target (chưa completed trước đó)
+        if (isNowCompleted && !wasCompleted) {
+          // Lấy tên hiển thị: ưu tiên activity type, nếu không có thì dùng goal type
+          final goalDisplayName = goal.activityTypeFilter != null && goal.activityTypeFilter!.isNotEmpty
+              ? ActivityTypeHelper.resolve(goal.activityTypeFilter).displayName
+              : goal.goalType.displayName;
+          await notificationService.showGoalCompletedNotification(goalDisplayName);
+        }
       }
     } catch (e, stack) {
       debugPrint('Failed to check goal completion: $e');
       debugPrint(stack.toString());
+    }
+  }
+
+  /// Kiểm tra xem ngày của activity có nằm trong timeframe của goal không
+  /// - Daily: cùng ngày với startDate của goal
+  /// - Weekly: cùng tuần với startDate của goal (tuần bắt đầu từ Thứ 2)
+  /// - Monthly: cùng tháng với startDate của goal
+  /// - Yearly: cùng năm với startDate của goal
+  /// - Nếu timeFrame == null: return true (check theo deadline đã được xử lý ở trên)
+  bool _isDateInGoalTimeFrame(DateTime activityDate, Goal goal) {
+    if (goal.timeFrame == null) {
+      // Nếu không có timeFrame, check theo deadline (logic cũ)
+      return true;
+    }
+
+    final activityDay = DateTime(activityDate.year, activityDate.month, activityDate.day);
+    final goalStartDay = DateTime(goal.startDate.year, goal.startDate.month, goal.startDate.day);
+
+    switch (goal.timeFrame!) {
+      case GoalTimeFrame.daily:
+        // Cùng ngày với startDate của goal
+        return activityDay.isAtSameMomentAs(goalStartDay);
+      
+      case GoalTimeFrame.weekly:
+        // Cùng tuần với startDate của goal (tuần bắt đầu từ Thứ 2)
+        final startWeekday = goal.startDate.weekday;
+        final startDaysFromMonday = startWeekday == 7 ? 0 : startWeekday - 1;
+        final weekStart = DateTime(
+          goal.startDate.year,
+          goal.startDate.month,
+          goal.startDate.day - startDaysFromMonday,
+        );
+        final weekEnd = weekStart.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+        
+        // Activity phải nằm trong khoảng từ đầu tuần đến cuối tuần của startDate
+        return activityDate.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+               activityDate.isBefore(weekEnd.add(const Duration(seconds: 1)));
+      
+      case GoalTimeFrame.monthly:
+        // Cùng tháng với startDate của goal
+        return activityDate.year == goal.startDate.year &&
+               activityDate.month == goal.startDate.month;
+      
+      case GoalTimeFrame.yearly:
+        // Cùng năm với startDate của goal
+        return activityDate.year == goal.startDate.year;
     }
   }
 

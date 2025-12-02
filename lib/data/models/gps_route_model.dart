@@ -21,24 +21,50 @@ class GpsRouteModel {
   final int totalDurationSeconds;
   final DateTime createdAt;
 
+  /// Giới hạn số điểm mỗi segment để tối ưu storage
+  static const int _maxPointsPerSegment = 800;
+
+  /// Downsample points nếu quá nhiều, giữ lại điểm đầu và cuối
+  static List<T> _downsamplePoints<T>(List<T> points, int maxPoints) {
+    if (points.length <= maxPoints) return points;
+    
+    final result = <T>[];
+    result.add(points.first); // Luôn giữ điểm đầu
+    
+    final step = (points.length - 2) / (maxPoints - 2);
+    for (int i = 1; i < maxPoints - 1; i++) {
+      final index = (1 + i * step).round();
+      if (index < points.length) {
+        result.add(points[index]);
+      }
+    }
+    
+    result.add(points.last); // Luôn giữ điểm cuối
+    return result;
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
       'activityId': activityId,
       'segments': segments
           .map(
-            (s) => {
-              'startTime': Timestamp.fromDate(s.startTime),
-              'endTime': s.endTime != null ? Timestamp.fromDate(s.endTime!) : null,
-              'points': s.points
-                  .map(
-                    (p) => {
-                      'lat': p.lat,
-                      'lng': p.lng,
-                      'timestamp': Timestamp.fromDate(p.timestamp),
-                    },
-                  )
-                  .toList(),
+            (s) {
+              // Downsample points nếu quá nhiều
+              final pointsToSave = _downsamplePoints(s.points, _maxPointsPerSegment);
+              return {
+                'startTime': Timestamp.fromDate(s.startTime),
+                'endTime': s.endTime != null ? Timestamp.fromDate(s.endTime!) : null,
+                'points': pointsToSave
+                    .map(
+                      (p) => {
+                        'lat': p.lat,
+                        'lng': p.lng,
+                        'timestamp': Timestamp.fromDate(p.timestamp),
+                      },
+                    )
+                    .toList(),
+              };
             },
           )
           .toList(),

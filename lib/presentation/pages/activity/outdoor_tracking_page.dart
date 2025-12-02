@@ -306,54 +306,78 @@ class _OutdoorTrackingView extends StatelessWidget {
       final resolvedActivityKey =
           ActivityTypeHelper.resolve(session.activityType).key;
 
-      Goal? matchedGoal;
+      // Tìm TẤT CẢ goals phù hợp (không chỉ 1 goal)
+      final matchedGoals = <Goal>[];
       for (final goal in goals) {
-        final goalKey =
-            ActivityTypeHelper.resolve(goal.activityTypeFilter).key;
-        if (goalKey == resolvedActivityKey) {
-          matchedGoal = goal;
-          break;
+        // Skip weight goals
+        if (goal.goalType == GoalType.weight) continue;
+        
+        // Check date range
+        if (session.date.isBefore(goal.startDate)) continue;
+        if (goal.deadline != null) {
+          final d = goal.deadline!;
+          final endOfDeadline =
+              DateTime(d.year, d.month, d.day, 23, 59, 59);
+          if (session.date.isAfter(endOfDeadline)) continue;
+        }
+        
+        // Check activity type match
+        bool activityMatch = false;
+        if (goal.activityTypeFilter == null || goal.activityTypeFilter!.isEmpty) {
+          // Goal không filter activity type -> match tất cả
+          activityMatch = true;
+        } else {
+          final goalKey =
+              ActivityTypeHelper.resolve(goal.activityTypeFilter).key;
+          activityMatch = goalKey == resolvedActivityKey;
+        }
+        
+        if (activityMatch) {
+          matchedGoals.add(goal);
         }
       }
-      matchedGoal ??= goals
-          .where((g) => g.activityTypeFilter == null)
-          .fold<Goal?>(null, (prev, g) {
-        if (prev == null) return g;
-        return g.startDate.isAfter(prev.startDate) ? g : prev;
-      });
-      matchedGoal ??= goals.reduce(
-        (a, b) => a.startDate.isAfter(b.startDate) ? a : b,
-      );
 
-      double increment = 0;
-      switch (matchedGoal.goalType) {
-        case GoalType.distance:
-          increment = session.distanceKm ?? 0;
-          break;
-        case GoalType.calories:
-          increment = session.calories;
-          break;
-        case GoalType.duration:
-          increment = session.durationSeconds / 60.0;
-          break;
-        case GoalType.weight:
-          increment = 0;
-          break;
+      if (matchedGoals.isEmpty) return;
+
+      // Update TẤT CẢ goals phù hợp
+      for (final goal in matchedGoals) {
+        double increment = 0;
+        switch (goal.goalType) {
+          case GoalType.distance:
+            increment = session.distanceKm ?? 0;
+            break;
+          case GoalType.calories:
+            increment = session.calories;
+            break;
+          case GoalType.duration:
+            increment = session.durationSeconds / 60.0;
+            break;
+          case GoalType.weight:
+            increment = 0;
+            break;
+        }
+        if (increment <= 0) continue;
+        
+        // Skip nếu goal đã completed và currentValue đã đạt target (không cần update nữa)
+        final wasCompleted = goal.status == GoalStatus.completed;
+        if (wasCompleted && goal.currentValue >= goal.targetValue) {
+          // Goal đã completed, không cần update nữa
+          continue;
+        }
+
+        final newCurrentValue = (goal.currentValue + increment)
+            .clamp(0, goal.targetValue);
+
+        final updatedGoal = goal.copyWith(
+          currentValue: newCurrentValue.toDouble(),
+          updatedAt: DateTime.now(),
+          status: newCurrentValue >= goal.targetValue
+              ? GoalStatus.completed
+              : goal.status,
+        );
+
+        await goalRepo.updateGoal(updatedGoal);
       }
-      if (increment <= 0) return;
-
-      final newCurrentValue = (matchedGoal.currentValue + increment)
-          .clamp(0, matchedGoal.targetValue);
-
-      final updatedGoal = matchedGoal.copyWith(
-        currentValue: newCurrentValue.toDouble(),
-        updatedAt: DateTime.now(),
-        status: newCurrentValue >= matchedGoal.targetValue
-            ? GoalStatus.completed
-            : matchedGoal.status,
-      );
-
-      await goalRepo.updateGoal(updatedGoal);
     } catch (e) {
       debugPrint('Failed to update goal progress: $e');
     }

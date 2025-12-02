@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 
+import 'core/services/local_storage_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/sync_service.dart';
 import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firestore_activity_repository.dart';
 import 'data/repositories/firestore_goal_repository.dart';
@@ -33,13 +35,32 @@ void main() async {
   final notificationService =
       NotificationService(FlutterLocalNotificationsPlugin());
   await notificationService.init();
-  runApp(FitnessApp(notificationService: notificationService));
+  
+  // Initialize sync service
+  final syncService = SyncService();
+  await syncService.init();
+  
+  // Initialize local storage service
+  final localStorageService = LocalStorageService();
+  
+  runApp(FitnessApp(
+    notificationService: notificationService,
+    syncService: syncService,
+    localStorageService: localStorageService,
+  ));
 }
 
 class FitnessApp extends StatelessWidget {
-  const FitnessApp({super.key, required this.notificationService});
+  const FitnessApp({
+    super.key,
+    required this.notificationService,
+    required this.syncService,
+    required this.localStorageService,
+  });
 
   final NotificationService notificationService;
+  final SyncService syncService;
+  final LocalStorageService localStorageService;
 
   @override
   Widget build(BuildContext context) {
@@ -57,17 +78,44 @@ class FitnessApp extends StatelessWidget {
         Provider<WeightHistoryRepository>(
           create: (_) => FirestoreWeightHistoryRepository(),
         ),
+        Provider<SyncService>.value(
+          value: syncService,
+        ),
+        Provider<LocalStorageService>.value(
+          value: localStorageService,
+        ),
         Provider<ActivityRepository>(
-          create: (_) => FirestoreActivityRepository(),
+          create: (context) {
+            final repo = FirestoreActivityRepository(
+              syncService: syncService,
+              localStorageService: localStorageService,
+            );
+            repo.registerSyncHandler(syncService);
+            return repo;
+          },
         ),
         Provider<StreakRepository>(
           create: (_) => FirestoreStreakRepository(),
         ),
         Provider<GoalRepository>(
-          create: (_) => FirestoreGoalRepository(),
+          create: (context) {
+            final repo = FirestoreGoalRepository(
+              syncService: syncService,
+              localStorageService: localStorageService,
+            );
+            repo.registerSyncHandler(syncService);
+            return repo;
+          },
         ),
         Provider<GpsRouteRepository>(
-          create: (_) => FirestoreGpsRouteRepository(),
+          create: (context) {
+            final repo = FirestoreGpsRouteRepository(
+              syncService: syncService,
+              localStorageService: localStorageService,
+            );
+            repo.registerSyncHandler(syncService);
+            return repo;
+          },
         ),
         ChangeNotifierProvider<AuthViewModel>(
           create: (context) => AuthViewModel(

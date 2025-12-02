@@ -147,6 +147,12 @@ class ActivityHistoryViewModel extends ChangeNotifier {
         end: end,
       );
       debugPrint('Loaded ${_allSessions.length} activities');
+      
+      // Debug: Log all activity dates to check if any are outside the range
+      for (final session in _allSessions) {
+        debugPrint('Activity: id=${session.id}, date=${session.date}, type=${session.activityType}');
+      }
+      
       _applyFilters();
     } catch (e) {
       debugPrint('Error loading history: $e');

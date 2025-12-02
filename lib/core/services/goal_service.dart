@@ -84,28 +84,43 @@ class GoalService {
     double remainingValue = goal.targetValue - currentValue;
     if (remainingValue < 0) remainingValue = 0;
 
-    final shouldComplete = progress >= 0.999;
-    final desiredStatus =
-        shouldComplete ? GoalStatus.completed : GoalStatus.active;
+    final wasCompleted = goal.status == GoalStatus.completed;
+    final epsilon = 1e-6;
+    final shouldComplete = progress >= 1.0 - epsilon;
 
-    final statusChanged = goal.status != desiredStatus;
-    if (statusChanged || (currentValue - goal.currentValue).abs() > 0.1) {
-      final updatedGoal = goal.copyWith(
-        currentValue: currentValue,
-        status: desiredStatus,
-        updatedAt: DateTime.now(),
-      );
-      await _goalRepository.updateGoal(updatedGoal);
-      goal = updatedGoal;
+    if (wasCompleted && !shouldComplete) {
+      // Giữ nguyên trạng thái đã hoàn thành kể cả khi dữ liệu giảm (do xóa hoạt động)
+      progress = 1;
+      remainingValue = 0;
+    } else {
+      final desiredStatus =
+          (shouldComplete || wasCompleted) ? GoalStatus.completed : GoalStatus.active;
 
-      if (statusChanged &&
-          goal.status == GoalStatus.completed &&
-          desiredStatus == GoalStatus.completed) {
-        await _notificationService
-            ?.showGoalCompletedNotification(_getGoalDisplayName(goal));
-        await _notificationService?.cancelGoalDeadlineNotifications(goal.id);
-        await _notificationService?.cancelGoalDailyReminder(goal.id);
-        await _clearDeadlineFlags(goal.id);
+      final statusChanged = goal.status != desiredStatus;
+      final shouldUpdateValue =
+          (currentValue - goal.currentValue).abs() > 0.1 ||
+          statusChanged;
+
+      if (shouldUpdateValue) {
+        final updatedGoal = goal.copyWith(
+          currentValue: desiredStatus == GoalStatus.completed
+              ? goal.targetValue
+              : currentValue,
+          status: desiredStatus,
+          updatedAt: DateTime.now(),
+        );
+        await _goalRepository.updateGoal(updatedGoal);
+        goal = updatedGoal;
+
+        if (statusChanged &&
+            goal.status == GoalStatus.completed &&
+            desiredStatus == GoalStatus.completed) {
+          await _notificationService
+              ?.showGoalCompletedNotification(_getGoalDisplayName(goal));
+          await _notificationService?.cancelGoalDeadlineNotifications(goal.id);
+          await _notificationService?.cancelGoalDailyReminder(goal.id);
+          await _clearDeadlineFlags(goal.id);
+        }
       }
     }
 

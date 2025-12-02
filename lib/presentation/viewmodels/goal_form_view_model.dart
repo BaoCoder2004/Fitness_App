@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/goal.dart';
@@ -75,8 +77,11 @@ class GoalFormViewModel extends ChangeNotifier {
         timeFrame: timeFrame,
       );
 
-      await _goalRepository.createGoal(goal);
       _setError(null);
+      unawaited(_goalRepository.createGoal(goal).catchError((e) {
+        debugPrint('Deferred goal creation failed: $e');
+        _setError('Không thể đồng bộ mục tiêu. Vui lòng mở lại app khi có mạng.');
+      }));
       return true;
     } catch (e) {
       _setError('Không thể tạo mục tiêu. Vui lòng thử lại.');
