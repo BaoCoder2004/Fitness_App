@@ -93,7 +93,7 @@
 ### Phase 5: Tự động gợi ý
 - **5.1 Tự động phân tích:**
   - Trigger khi có dữ liệu mới (buổi tập mới, cập nhật cân nặng)
-  - Hoặc chạy định kỳ (hàng ngày/tuần)
+  - Hoặc chạy, đi bộ, đạp xe định kỳ (hàng ngày/tuần)
 - **5.2 Gửi thông báo insight mới:**
   - Sử dụng NotificationService
   - Thông báo khi có insight mới

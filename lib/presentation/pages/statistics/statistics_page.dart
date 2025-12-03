@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../../core/services/advanced_health_calculator.dart';
 import '../../../core/services/chart_service.dart';
 import '../../../core/services/health_calculator.dart';
@@ -304,7 +303,8 @@ class _PeriodDropdown extends StatelessWidget {
         formatter = _formatMonth;
         // Tìm tháng hiện tại được chọn
         for (final month in availableMonths) {
-          if (selectedDate.year == month.year && selectedDate.month == month.month) {
+          if (selectedDate.year == month.year &&
+              selectedDate.month == month.month) {
             currentValue = formatter(month);
             break;
           }
@@ -337,8 +337,7 @@ class _PeriodDropdown extends StatelessWidget {
       return Text(
         'Chưa có dữ liệu',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color:
-                  Theme.of(context).colorScheme.onSurface.withAlpha(153),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
             ),
       );
     }
@@ -354,7 +353,8 @@ class _PeriodDropdown extends StatelessWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       ),
       items: availablePeriods.map((period) {
         final label = formatter(period);
@@ -470,8 +470,10 @@ class _SummaryStats extends StatelessWidget {
     final total = dataPoints.map((e) => e.value).reduce((a, b) => a + b);
     final average = total / dataPoints.length;
     // Sử dụng maxValue và minValue từ viewModel để lấy giá trị chính xác từ dữ liệu gốc
-    final max = viewModel.maxValue ?? dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    final min = viewModel.minValue ?? dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
+    final max = viewModel.maxValue ??
+        dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final min = viewModel.minValue ??
+        dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -931,7 +933,6 @@ class _DetailedMetricCard extends StatelessWidget {
     );
   }
 }
-
 
 class _BMISection extends StatelessWidget {
   const _BMISection();

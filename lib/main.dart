@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/services/local_storage_service.dart';
 import 'core/services/notification_service.dart';
@@ -13,6 +14,8 @@ import 'data/repositories/firestore_gps_route_repository.dart';
 import 'data/repositories/firestore_streak_repository.dart';
 import 'data/repositories/firestore_user_profile_repository.dart';
 import 'data/repositories/firestore_weight_history_repository.dart';
+import 'data/repositories/firestore_chat_repository.dart';
+import 'core/services/gemini_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'presentation/pages/auth/splash_page.dart';
@@ -26,9 +29,25 @@ import 'domain/repositories/streak_repository.dart';
 import 'domain/repositories/gps_route_repository.dart';
 import 'domain/repositories/user_profile_repository.dart';
 import 'domain/repositories/weight_history_repository.dart';
+import 'domain/repositories/chat_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables from .env file
+  try {
+    await dotenv.load(fileName: '.env');
+    final apiKey = dotenv.env['GEMINI_API_KEY'];
+    if (apiKey != null && apiKey.isNotEmpty) {
+      debugPrint('✅ Đã load GEMINI_API_KEY thành công (${apiKey.substring(0, 10)}...)');
+    } else {
+      debugPrint('⚠️ GEMINI_API_KEY không có trong file .env');
+    }
+  } catch (e) {
+    // .env file không bắt buộc, chỉ cần khi dùng Gemini API
+    debugPrint('⚠️ Không tìm thấy file .env: $e');
+  }
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -116,6 +135,12 @@ class FitnessApp extends StatelessWidget {
             repo.registerSyncHandler(syncService);
             return repo;
           },
+        ),
+        Provider<ChatRepository>(
+          create: (_) => FirestoreChatRepository(),
+        ),
+        Provider<GeminiService>(
+          create: (_) => GeminiService(),
         ),
         ChangeNotifierProvider<AuthViewModel>(
           create: (context) => AuthViewModel(
