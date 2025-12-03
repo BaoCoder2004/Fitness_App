@@ -162,7 +162,11 @@ class ChatViewModel extends ChangeNotifier {
         conversationId: _currentConversationId,
         message: assistantMessage,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      // Ghi log chi tiết để dễ debug (VD: lỗi mạng, lỗi rate limit, cấu hình API...)
+      debugPrint('Lỗi khi gửi tin nhắn tới Gemini: $e');
+      debugPrint('Stacktrace: $stack');
+
       _isTyping = false;
       _error = 'Không thể gửi tin nhắn. Vui lòng thử lại.';
       notifyListeners();

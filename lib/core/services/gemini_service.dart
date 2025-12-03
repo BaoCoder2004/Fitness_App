@@ -25,10 +25,7 @@ class GeminiService {
   GeminiService() {
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
-      debugPrint('🔍 Đang kiểm tra GEMINI_API_KEY...');
-      debugPrint('🔍 dotenv.env keys: ${dotenv.env.keys.toList()}');
-      debugPrint('🔍 GEMINI_API_KEY value: ${apiKey != null ? "${apiKey.substring(0, 10)}..." : "null"}');
-      
+
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint(
           '⚠️ GEMINI_API_KEY không được tìm thấy trong file .env. '
@@ -40,7 +37,6 @@ class GeminiService {
       }
       _apiKey = apiKey;
       _isInitialized = true;
-      debugPrint('✅ GeminiService đã được khởi tạo thành công');
     } catch (e) {
       debugPrint('⚠️ Lỗi khi khởi tạo GeminiService: $e');
       _apiKey = '';
