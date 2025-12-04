@@ -234,7 +234,7 @@ class ChatViewModel extends ChangeNotifier {
         userId: _userId,
         conversationId: conversationId,
       );
-      // Nếu đang xem conversation này, clear messages
+      // Nếu đang xem conversation này, đưa user về màn Chat rỗng
       if (_currentConversationId == conversationId) {
         startNewConversation();
       }

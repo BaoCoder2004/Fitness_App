@@ -217,7 +217,7 @@ class _ChatHistoryDialogState extends State<ChatHistoryDialog> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () {
-                                Navigator.of(context).pop();
+                                // Chỉ gọi callback, việc đóng dialog để màn ngoài xử lý
                                 widget.onConversationSelected(conversation.id);
                               },
                               borderRadius: BorderRadius.circular(16),

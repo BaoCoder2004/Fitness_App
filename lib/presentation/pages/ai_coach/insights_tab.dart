@@ -146,8 +146,11 @@ class _InsightsTabState extends State<InsightsTab> {
                             ),
                           )
                         : const Icon(Icons.auto_awesome),
+                    // Giảm mạnh khoảng cách giữa icon và text
+                    extendedIconLabelSpacing: 4,
                     label: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 10.0),
+                      // Tiếp tục giảm padding ngang để icon & text gần nhau hơn nữa
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
                       child: Text(viewModel.isLoading ? 'Đang tạo...' : 'Tạo insight'),
                     ),
                   ),
@@ -226,7 +229,8 @@ class _InsightsTabState extends State<InsightsTab> {
                   )
                 : const Icon(Icons.auto_awesome),
             label: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+              // Giảm thêm chút padding ngang
+              padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
               child: Text(viewModel.isLoading ? 'Đang tạo...' : 'Tạo insight'),
             ),
             style: ElevatedButton.styleFrom(

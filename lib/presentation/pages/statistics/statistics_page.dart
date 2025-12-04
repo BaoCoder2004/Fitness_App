@@ -501,14 +501,15 @@ class _SummaryStats extends StatelessWidget {
                   Expanded(
                     child: _StatItem(
                       label: 'Tổng',
-                      value: total.toStringAsFixed(1),
+                      // Giữ chi tiết hơn (2 chữ số thập phân) để không gây hiểu nhầm khi dữ liệu nhỏ
+                      value: total.toStringAsFixed(2),
                       unit: viewModel.getMetricLabel(),
                     ),
                   ),
                   Expanded(
                     child: _StatItem(
                       label: 'Trung bình',
-                      value: average.toStringAsFixed(1),
+                      value: average.toStringAsFixed(2),
                       unit: viewModel.getMetricLabel(),
                     ),
                   ),
@@ -521,14 +522,14 @@ class _SummaryStats extends StatelessWidget {
                 Expanded(
                   child: _StatItem(
                     label: 'Cao nhất',
-                    value: max.toStringAsFixed(1),
+                    value: max.toStringAsFixed(2),
                     unit: viewModel.getMetricLabel(),
                   ),
                 ),
                 Expanded(
                   child: _StatItem(
                     label: 'Thấp nhất',
-                    value: min.toStringAsFixed(1),
+                    value: min.toStringAsFixed(2),
                     unit: viewModel.getMetricLabel(),
                   ),
                 ),

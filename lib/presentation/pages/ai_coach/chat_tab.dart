@@ -99,11 +99,12 @@ class _ChatTabState extends State<ChatTab> {
   }
 
   Future<void> _showClearHistoryDialog(ChatViewModel viewModel) async {
+    // Dialog này bây giờ chỉ xóa CUỘC TRÒ CHUYỆN HIỆN TẠI, không xóa toàn bộ lịch sử
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xóa lịch sử chat'),
-        content: const Text('Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat?'),
+        title: const Text('Xóa cuộc trò chuyện'),
+        content: const Text('Bạn có chắc chắn muốn xóa cuộc trò chuyện hiện tại?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -121,7 +122,10 @@ class _ChatTabState extends State<ChatTab> {
     );
 
     if (confirmed == true) {
-      await viewModel.clearChatHistory();
+      final currentId = viewModel.currentConversationId;
+      if (currentId != null) {
+        await viewModel.deleteConversation(currentId);
+      }
     }
   }
 
@@ -293,10 +297,9 @@ class _ChatTabState extends State<ChatTab> {
         ),
         title: const Text('Chat với AI'),
         actions: [
-          // Nút Lịch sử
+          // Nút Lịch sử - luôn hiển thị để user dễ truy cập lịch sử
           Consumer<ChatViewModel>(
             builder: (context, viewModel, _) {
-              if (viewModel.messages.isEmpty) return const SizedBox.shrink();
               return IconButton(
                 icon: const Icon(Icons.history),
                 tooltip: 'Lịch sử chat',
@@ -332,7 +335,7 @@ class _ChatTabState extends State<ChatTab> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Xóa lịch sử',
+                          'Xóa cuộc trò chuyện',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                           ),
