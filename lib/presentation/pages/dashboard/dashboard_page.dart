@@ -447,6 +447,10 @@ class _NotificationPopupDialogState extends State<_NotificationPopupDialog> {
   @override
   Widget build(BuildContext context) {
     final showEntries = _history.take(10).toList();
+    final screenHeight = MediaQuery.of(context).size.height;
+    // Chiều cao tối đa của popup ~60% chiều cao màn hình, để tránh overflow
+    final maxPopupHeight = screenHeight * 0.6;
+
     return Stack(
       children: [
         // Invisible tap area to close dialog
@@ -493,7 +497,7 @@ class _NotificationPopupDialogState extends State<_NotificationPopupDialog> {
                 color: Colors.white,
                 child: Container(
                   width: 340,
-                  constraints: const BoxConstraints(maxHeight: 440),
+                  constraints: BoxConstraints(maxHeight: maxPopupHeight),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

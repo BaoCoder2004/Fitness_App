@@ -17,6 +17,7 @@ class NotificationIds {
   static const int goalDeadlineBase = 600;
   static const int goalDeadlineWarningBase = 650;
   static const int goalDailyReminderBase = 700;
+  static const int aiInsightBase = 800;
 }
 
 class NotificationLogEntry {
@@ -761,6 +762,38 @@ class NotificationService {
         ),
       ),
       payload: 'milestone_$milestoneId',
+    );
+  }
+
+  /// Gửi thông báo khi có insight mới từ AI
+  Future<void> showAIInsightNotification({
+    required String insightId,
+    required String title,
+    required String preview,
+  }) async {
+    final uniqueId =
+        NotificationIds.aiInsightBase + (insightId.hashCode & 0x7fffffff);
+    await _plugin.show(
+      uniqueId,
+      '💡 AI Insight mới',
+      title.length > 50 ? '${title.substring(0, 50)}...' : title,
+      NotificationDetails(
+        android: _buildAndroidDetails(
+          channelId: 'ai_insight_channel',
+          channelName: 'AI Insights',
+          channelDescription: 'Thông báo khi có phân tích và gợi ý mới từ AI',
+        ),
+      ),
+      payload: 'ai_insight_$insightId',
+    );
+    await _saveHistoryEntry(
+      NotificationLogEntry(
+        id: 'ai_insight_${DateTime.now().millisecondsSinceEpoch}',
+        title: '💡 AI Insight mới',
+        body: title,
+        timestamp: DateTime.now(),
+        type: 'ai_insight',
+      ),
     );
   }
 

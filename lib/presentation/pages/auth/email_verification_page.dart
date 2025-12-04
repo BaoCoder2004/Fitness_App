@@ -84,6 +84,17 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                 children: [
                   ElevatedButton(
                     onPressed: _checking ? null : _checkVerification,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 14,
+                      ),
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
                     child: _checking
                         ? const SizedBox(
                             width: 16,
@@ -105,6 +116,17 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                         ),
                       );
                     },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 14,
+                      ),
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
                     child: const Text('Gửi lại email'),
                   ),
                 ],

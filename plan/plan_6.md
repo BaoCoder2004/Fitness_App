@@ -4,6 +4,11 @@
 - **TẤT CẢ tên chức năng, nút bấm, label trên giao diện phải bằng TIẾNG VIỆT**
 - Ví dụ: "AI Insights", "Phân tích", "Gợi ý", "Áp dụng gợi ý", "Xem chi tiết", v.v.
 
+**⚠️ Phạm vi của Plan 6:**
+- **AI chỉ PHÂN TÍCH dữ liệu và ĐƯA RA GỢI Ý**
+- **KHÔNG tự động tạo mục tiêu mới** (chỉ gợi ý người dùng nên điều chỉnh)
+- **KHÔNG tự động tạo kế hoạch tập luyện** (chỉ gợi ý bài tập phù hợp)
+
 ### Phase 1: Phân tích dữ liệu người dùng
 - **1.1 Tạo `DataAnalyzer` service:**
   - Method `analyzeWeightTrend(userId, days)`: Phân tích xu hướng cân nặng
@@ -64,10 +69,11 @@
   - Cân nặng không thay đổi
   - Hoạt động giảm dần
 - **3.5 Đưa ra gợi ý cá nhân hóa:**
-  - Điều chỉnh mục tiêu dựa trên tiến độ
+  - Gợi ý điều chỉnh mục tiêu dựa trên tiến độ (người dùng tự quyết định)
   - Lời khuyên dinh dưỡng
-  - Gợi ý bài tập phù hợp
+  - Gợi ý bài tập phù hợp (không tạo kế hoạch cụ thể)
   - Cảnh báo khi có dấu hiệu bất thường
+  - **Lưu ý:** AI chỉ đưa ra gợi ý, KHÔNG tự động tạo mục tiêu hay kế hoạch mới
 
 ### Phase 4: Màn hình Insights từ AI
 - **4.1 Tạo collection `ai_insights`** trong Firestore:
@@ -78,7 +84,6 @@
     - Danh sách các insights
     - Card hiển thị: title, summary, ngày tạo
     - Tap để xem chi tiết
-    - Pull to refresh để load insights mới
     - Empty state khi chưa có insights
 - **4.3 Màn hình Insight Detail:**
   - Hiển thị phân tích chi tiết
@@ -108,41 +113,19 @@
   - Có thể cache kết quả để không phải tính lại mỗi lần
   - **Lưu ý**: Không cần WorkManager - phân tích AI có thể chạy khi user tương tác với app
 
-### Phase 6: AI tạo kế hoạch tập luyện tự động
-- **6.1 Tạo kế hoạch dựa trên mục tiêu:**
-  - Lấy mục tiêu của user
-  - Lấy thể trạng (age, height, weight, fitness level)
-  - Gửi đến Gemini với prompt tạo kế hoạch
-- **6.2 Format kế hoạch từ AI:**
-  - Parse response từ AI
-  - Tạo structure: tuần → ngày → bài tập
-  - Lưu vào `user_active_plans` với customPlanData
-- **6.3 Gợi ý bài tập cụ thể:**
-  - AI gợi ý bài tập cho từng ngày
-  - Bao gồm: tên bài tập, thời gian, số lần lặp
-  - Phù hợp với mục tiêu và thể trạng
-- **6.4 Điều chỉnh kế hoạch:**
-  - Phân tích tiến độ thực tế
-  - So sánh với kế hoạch
-  - Đề xuất điều chỉnh (tăng/giảm cường độ)
-- **6.5 Tạo kế hoạch từ GPS data:**
-  - Phân tích dữ liệu GPS hiện tại
-  - Tạo kế hoạch tăng dần (ví dụ: tăng quãng đường chạy)
-  - Progressive overload
-
-### Phase 7: UI/UX và tối ưu
-- **7.1 Loading states:**
+### Phase 6: UI/UX và tối ưu
+- **6.1 Loading states:**
   - Shimmer effect khi đang phân tích
   - Progress indicator
-- **7.2 Error handling:**
+- **6.2 Error handling:**
   - Xử lý khi AI API lỗi
   - Retry mechanism
   - Fallback: Hiển thị insights cũ
-- **7.3 Performance:**
+- **6.3 Performance:**
   - Cache insights đã phân tích
   - Chỉ phân tích lại khi có dữ liệu mới
   - Debounce cho auto-analysis
-- **7.4 Animation:**
+- **6.4 Animation:**
   - Smooth transition khi hiển thị insights
   - Celebration khi có insight tích cực
 

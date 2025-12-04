@@ -15,6 +15,7 @@ import 'data/repositories/firestore_streak_repository.dart';
 import 'data/repositories/firestore_user_profile_repository.dart';
 import 'data/repositories/firestore_weight_history_repository.dart';
 import 'data/repositories/firestore_chat_repository.dart';
+import 'data/repositories/firestore_ai_insight_repository.dart';
 import 'core/services/gemini_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
@@ -30,6 +31,7 @@ import 'domain/repositories/gps_route_repository.dart';
 import 'domain/repositories/user_profile_repository.dart';
 import 'domain/repositories/weight_history_repository.dart';
 import 'domain/repositories/chat_repository.dart';
+import 'domain/repositories/ai_insight_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -138,6 +140,9 @@ class FitnessApp extends StatelessWidget {
         ),
         Provider<ChatRepository>(
           create: (_) => FirestoreChatRepository(),
+        ),
+        Provider<AIInsightRepository>(
+          create: (_) => FirestoreAIInsightRepository(),
         ),
         Provider<GeminiService>(
           create: (_) => GeminiService(),

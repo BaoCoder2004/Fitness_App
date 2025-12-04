@@ -108,9 +108,13 @@ class UserProfileViewModel extends ChangeNotifier {
         .copyWith(
       name: name,
       age: age,
+      overrideAge: true,
       heightCm: heightCm,
+      overrideHeight: true,
       weightKg: weightKg,
+      overrideWeight: true,
       gender: normalizedGender,
+      overrideGender: true,
       avatarBase64: avatarBase64,
       avatarBase64Set: avatarChanged,
       updatedAt: DateTime.now(),

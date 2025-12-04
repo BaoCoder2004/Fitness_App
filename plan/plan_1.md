@@ -215,7 +215,7 @@
       * Khiêu vũ: 4.8
       * Calisthenics: 8.0
       * Boxing: 12.0
-      * Nhảy dây: 10.0    
+      * Nhảy dây: 10.0
 - **8.7 Theo dõi nhịp tim (Tùy chọn - chỉ cho Indoor activities):**
   - Setup dependencies: `flutter_blue_plus` cho kết nối BLE
   - Request Bluetooth permission

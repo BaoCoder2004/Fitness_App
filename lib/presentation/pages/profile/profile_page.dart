@@ -81,6 +81,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           child: const Text('Đăng xuất'),
                         ),
                       ],

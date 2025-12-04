@@ -45,7 +45,7 @@ class FirestoreUserProfileRepository implements UserProfileRepository {
 
   @override
   Future<void> updateProfile(UserProfile profile) {
-    final data = UserProfileModel(
+    final model = UserProfileModel(
       uid: profile.uid,
       email: profile.email,
       name: profile.name,
@@ -58,13 +58,24 @@ class FirestoreUserProfileRepository implements UserProfileRepository {
       language: profile.language,
       createdAt: profile.createdAt,
       updatedAt: profile.updatedAt ?? DateTime.now(),
-    ).toMap();
+    );
 
-    final avatarIsNull = profile.avatarBase64 == null;
-    data.removeWhere((key, value) => value == null);
-    if (avatarIsNull) {
-      data['avatarBase64'] = FieldValue.delete();
+    final data = model.toMap();
+
+    void _applyField(String key, dynamic value) {
+      if (value == null) {
+        data[key] = FieldValue.delete();
+      } else {
+        data[key] = value;
+      }
     }
+
+    _applyField('age', profile.age);
+    _applyField('heightCm', profile.heightCm);
+    _applyField('weightKg', profile.weightKg);
+    _applyField('gender', profile.gender);
+    _applyField('avatarBase64', profile.avatarBase64);
+
     return _collection.doc(profile.uid).update(data);
   }
 }

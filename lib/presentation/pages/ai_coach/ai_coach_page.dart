@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/ai_coach_service.dart';
+import '../../../core/services/data_analyzer.dart';
+import '../../../core/services/data_summarizer.dart';
+import '../../../core/services/gemini_service.dart';
+import '../../../core/services/notification_service.dart';
+import '../../../domain/repositories/activity_repository.dart';
+import '../../../domain/repositories/ai_insight_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/chat_repository.dart';
-import '../../../core/services/gemini_service.dart';
+import '../../../domain/repositories/goal_repository.dart';
+import '../../../domain/repositories/gps_route_repository.dart';
+import '../../../domain/repositories/user_profile_repository.dart';
+import '../../../domain/repositories/weight_history_repository.dart';
 import '../../../presentation/viewmodels/chat_view_model.dart';
+import '../../../presentation/viewmodels/insights_view_model.dart';
 import 'chat_tab.dart';
+import 'insights_tab.dart';
 
 class AICoachPage extends StatelessWidget {
   const AICoachPage({super.key});
@@ -25,12 +37,53 @@ class AICoachPage extends StatelessWidget {
 
     final userId = currentUser.uid;
 
-    return ChangeNotifierProvider(
-      create: (_) => ChatViewModel(
-        chatRepository: chatRepository,
-        geminiService: geminiService,
-        userId: userId,
-      ),
+    // Get required services and repositories
+    final weightHistoryRepository = context.read<WeightHistoryRepository>();
+    final activityRepository = context.read<ActivityRepository>();
+    final gpsRouteRepository = context.read<GpsRouteRepository>();
+    final goalRepository = context.read<GoalRepository>();
+    final userProfileRepository = context.read<UserProfileRepository>();
+    final aiInsightRepository = context.read<AIInsightRepository>();
+    final notificationService = context.read<NotificationService>();
+
+    // Create services
+    final dataAnalyzer = DataAnalyzer(
+      weightHistoryRepository: weightHistoryRepository,
+      activityRepository: activityRepository,
+      gpsRouteRepository: gpsRouteRepository,
+      goalRepository: goalRepository,
+    );
+
+    final dataSummarizer = DataSummarizer(
+      dataAnalyzer: dataAnalyzer,
+      userProfileRepository: userProfileRepository,
+      goalRepository: goalRepository,
+    );
+
+    final aiCoachService = AICoachService(
+      dataAnalyzer: dataAnalyzer,
+      dataSummarizer: dataSummarizer,
+      geminiService: geminiService,
+    );
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => ChatViewModel(
+            chatRepository: chatRepository,
+            geminiService: geminiService,
+            userId: userId,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => InsightsViewModel(
+            aiCoachService: aiCoachService,
+            insightRepository: aiInsightRepository,
+            userId: userId,
+            notificationService: notificationService,
+          ),
+        ),
+      ],
       child: DefaultTabController(
         length: 2,
         child: Scaffold(
@@ -46,37 +99,10 @@ class AICoachPage extends StatelessWidget {
           body: const TabBarView(
             children: [
               ChatTab(),
-              _AIInsightsPlaceholder(),
+              InsightsTab(),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Placeholder cho Tab AI Insights (sẽ implement trong Plan 6)
-class _AIInsightsPlaceholder extends StatelessWidget {
-  const _AIInsightsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.insights_outlined,
-            size: 64,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'AI Insights',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text('Tính năng đang được phát triển'),
-        ],
       ),
     );
   }
