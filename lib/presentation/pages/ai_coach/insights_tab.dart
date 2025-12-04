@@ -119,8 +119,10 @@ class _InsightsTabState extends State<InsightsTab> {
                 ],
               ),
             ),
-            // Floating Action Button (chỉ hiển thị khi đã có insight)
-            if (viewModel.hasAnyInsights)
+            // Floating Action Button
+            // Chỉ hiển thị khi danh sách đang hiển thị KHÔNG rỗng
+            // (nếu filter hiện tại không có insight thì để user dùng button trong empty state)
+            if (viewModel.insights.isNotEmpty)
               Positioned(
                 bottom: 32,
                 right: 16,
