@@ -62,24 +62,6 @@ class ActivityChart extends StatelessWidget {
       yInterval = 50.0;
     }
     
-    // Tính toán các giá trị sẽ hiển thị trên trục Y với interval đã tính
-    // Sử dụng Set để đảm bảo không có trùng lặp
-    final displayedYValues = <int>{};
-    final minInt = adjustedMinY.floor();
-    final maxInt = adjustedMaxY.ceil();
-    // Bắt đầu từ giá trị làm tròn xuống theo interval
-    final startValue = (minInt / yInterval).floor() * yInterval;
-    
-    // Tính toán tất cả các giá trị sẽ hiển thị
-    var currentValue = startValue;
-    while (currentValue <= maxInt + yInterval * 0.5) {
-      final roundedValue = currentValue.round();
-      displayedYValues.add(roundedValue);
-      currentValue += yInterval;
-      // Giới hạn để tránh vòng lặp vô hạn
-      if (displayedYValues.length > 50) break;
-    }
-
     return Container(
       height: 250,
       padding: const EdgeInsets.all(16),
@@ -131,18 +113,14 @@ class ActivityChart extends StatelessWidget {
                 reservedSize: 50,
                 interval: yInterval,
                 getTitlesWidget: (value, meta) {
-                  // Làm tròn về giá trị gần nhất theo interval
-                  final roundedValue = (value / yInterval).round() * yInterval;
-                  final intValue = roundedValue.round();
-                  
-                  // Chỉ hiển thị nếu giá trị này chính xác nằm trong displayedYValues
-                  // displayedYValues là Set nên không có trùng lặp
-                  if (!displayedYValues.contains(intValue)) {
-                    return const SizedBox.shrink();
-                  }
-                  
-                  // Định dạng số
-                  final formattedValue = intValue.toString();
+                  // Chỉ hiển thị label tại đúng các bội số của interval để tránh trùng
+                  if (yInterval <= 0) return const SizedBox.shrink();
+                  final ratio = value / yInterval;
+                  final isOnTick = (ratio - ratio.round()).abs() < 1e-3;
+                  if (!isOnTick) return const SizedBox.shrink();
+
+                  // Định dạng số nguyên (không hiển thị .0)
+                  final formattedValue = value.round().toString();
                   
                   return Padding(
                     padding: const EdgeInsets.only(right: 6),

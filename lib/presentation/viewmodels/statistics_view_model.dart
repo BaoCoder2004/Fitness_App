@@ -306,23 +306,21 @@ class StatisticsViewModel extends ChangeNotifier {
 
     switch (_selectedRange) {
       case TimeRange.day:
-        // Cho "Ngày": Lấy hôm qua và hôm nay để so sánh
+        // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
         final today = DateTime.now();
-        final yesterday = today.subtract(const Duration(days: 1));
-        start = DateTime(yesterday.year, yesterday.month, yesterday.day);
+        final sevenDaysAgo = today.subtract(const Duration(days: 6));
+        start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
         end = DateTime(today.year, today.month, today.day, 23, 59, 59);
         break;
       case TimeRange.week:
-        // Cho "Tuần": Lấy từ đầu tuần (thứ 2) đến cuối tuần (chủ nhật)
-        final weekday = now.weekday;
-        start = now.subtract(Duration(days: weekday - 1));
-        start = DateTime(start.year, start.month, start.day);
-        // Tính cuối tuần (chủ nhật)
-        end = start.add(const Duration(days: 6));
-        end = DateTime(end.year, end.month, end.day, 23, 59, 59);
+        // Cho "Tuần": _selectedDate đã là thứ 2 của tuần được chọn
+        // Tính từ thứ 2 đến chủ nhật của tuần đó
+        start = DateTime(now.year, now.month, now.day);
+        final sunday = start.add(const Duration(days: 6));
+        end = DateTime(sunday.year, sunday.month, sunday.day, 23, 59, 59);
         break;
       case TimeRange.month:
-        // Cho "Tháng": Lấy trọn tháng được chọn
+        // Cho "Tháng": _selectedDate đã là ngày đầu tháng được chọn
         start = DateTime(now.year, now.month, 1);
         final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
         end = DateTime(
@@ -335,6 +333,7 @@ class StatisticsViewModel extends ChangeNotifier {
         );
         break;
       case TimeRange.year:
+        // Cho "Năm": _selectedDate đã là ngày đầu năm được chọn
         start = DateTime(now.year, 1, 1);
         end = DateTime(now.year, 12, 31, 23, 59, 59);
         break;
@@ -378,10 +377,10 @@ class StatisticsViewModel extends ChangeNotifier {
 
       switch (_selectedRange) {
         case TimeRange.day:
-          // Cho "Ngày": Lấy hôm qua và hôm nay để so sánh
+          // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
           final today = DateTime.now();
-          final yesterday = today.subtract(const Duration(days: 1));
-          start = DateTime(yesterday.year, yesterday.month, yesterday.day);
+          final sevenDaysAgo = today.subtract(const Duration(days: 6));
+          start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
           end = DateTime(today.year, today.month, today.day, 23, 59, 59);
           break;
         case TimeRange.week:
@@ -540,28 +539,28 @@ class StatisticsViewModel extends ChangeNotifier {
 
     switch (_selectedRange) {
       case TimeRange.day:
-        // Cho "Ngày": Lấy hôm qua và hôm nay để so sánh
+        // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
         final today = DateTime.now();
-        final yesterday = today.subtract(const Duration(days: 1));
-        start = DateTime(yesterday.year, yesterday.month, yesterday.day);
+        final sevenDaysAgo = today.subtract(const Duration(days: 6));
+        start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
         end = DateTime(today.year, today.month, today.day, 23, 59, 59);
         break;
       case TimeRange.week:
-        // Cho "Tuần": Từ thứ 2 đến Chủ nhật
-        final weekday = now.weekday;
-        final monday = now.subtract(Duration(days: weekday - 1));
-        start = DateTime(monday.year, monday.month, monday.day);
+        // Cho "Tuần": _selectedDate đã là thứ 2 của tuần được chọn
+        // Tính từ thứ 2 đến chủ nhật của tuần đó
+        final monday = DateTime(now.year, now.month, now.day);
+        start = monday;
         final sunday = monday.add(const Duration(days: 6));
         end = DateTime(sunday.year, sunday.month, sunday.day, 23, 59, 59);
         break;
       case TimeRange.month:
-        // Cho "Tháng": Từ đầu tháng đến cuối tháng
+        // Cho "Tháng": _selectedDate đã là ngày đầu tháng được chọn
         start = DateTime(now.year, now.month, 1);
         final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
         end = DateTime(now.year, now.month, lastDayOfMonth.day, 23, 59, 59);
         break;
       case TimeRange.year:
-        // Cho "Năm": Từ đầu năm đến cuối năm
+        // Cho "Năm": _selectedDate đã là ngày đầu năm được chọn
         start = DateTime(now.year, 1, 1);
         end = DateTime(now.year, 12, 31, 23, 59, 59);
         break;

@@ -35,18 +35,31 @@ class HistoryService {
 
     switch (range) {
       case TimeRange.day:
-        start = DateTime(now.year, now.month, now.day);
+        // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
+        final sevenDaysAgo = now.subtract(const Duration(days: 6));
+        start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
         break;
       case TimeRange.week:
+        // referenceDate đã là thứ 2 của tuần được chọn
+        // Tính từ thứ 2 đến chủ nhật của tuần đó
         final weekday = now.weekday;
-        start = now.subtract(Duration(days: weekday - 1));
-        start = DateTime(start.year, start.month, start.day);
+        final daysToSubtract = weekday == 1 ? 0 : weekday - 1;
+        final monday = now.subtract(Duration(days: daysToSubtract));
+        start = DateTime(monday.year, monday.month, monday.day);
+        // Tính cuối tuần (chủ nhật)
+        final sunday = monday.add(const Duration(days: 6));
+        end = DateTime(sunday.year, sunday.month, sunday.day, 23, 59, 59);
         break;
       case TimeRange.month:
+        // referenceDate đã là ngày đầu tháng được chọn
         start = DateTime(now.year, now.month, 1);
+        final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+        end = DateTime(now.year, now.month, lastDayOfMonth.day, 23, 59, 59);
         break;
       case TimeRange.year:
+        // referenceDate đã là ngày đầu năm được chọn
         start = DateTime(now.year, 1, 1);
+        end = DateTime(now.year, 12, 31, 23, 59, 59);
         break;
       case TimeRange.custom:
         if (customStart == null || customEnd == null) {
