@@ -233,143 +233,138 @@ class _IndoorTrackingViewState extends State<_IndoorTrackingView> {
       },
       child: Scaffold(
         appBar: AppBar(title: Text(widget.workoutType.title)),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: viewInsets + 16,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - viewInsets,
+        body: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: viewInsets + 16,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
                 ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 32,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withAlpha(20),
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.workoutType.title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: Colors.black54),
                         ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withAlpha(20),
-                          borderRadius: BorderRadius.circular(32),
+                        const SizedBox(height: 12),
+                        Text(
+                          '${duration.inHours.toString().padLeft(2, '0')}:$minutes:$seconds',
+                          style: Theme.of(context)
+                              .textTheme
+                              .displayMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.workoutType.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(color: Colors.black54),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  '${duration.inHours.toString().padLeft(2, '0')}:$minutes:$seconds',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displayMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  vm.isRunning ? 'Đang chạy' : 'Đang dừng',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                            Icon(
-                              widget.workoutType.icon,
-                              size: 42,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ],
+                        const SizedBox(height: 8),
+                        Text(
+                          vm.isRunning ? 'Đang chạy' : 'Đang dừng',
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          _MetricTile(
-                            label: 'Giờ hiện tại',
-                            value: DateFormat.Hm().format(DateTime.now()),
-                          ),
-                          _MetricTile(
-                            label: 'Calories',
-                            value: vm.calories.toStringAsFixed(1),
-                          ),
-                          _MetricTile(
-                            label: 'Nhịp tim',
-                            value: vm.heartRate != null
-                                ? '${vm.heartRate} bpm'
-                                : '--:--',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Nút kết nối thiết bị đo nhịp tim
-                      OutlinedButton.icon(
-                        onPressed: isConnected
-                            ? () async {
-                                final messenger = ScaffoldMessenger.of(context);
-                                await _heartRateService.disconnectDevice();
-                                if (!mounted) return;
-                                messenger.showSnackBar(
-                                  const SnackBar(content: Text('Đã ngắt kết nối thiết bị')),
-                                );
-                              }
-                            : _showDeviceScanDialog,
-                        icon: Icon(isConnected ? Icons.bluetooth_connected : Icons.bluetooth),
-                        label: Text(isConnected ? 'Ngắt kết nối' : 'Kết nối thiết bị đo nhịp tim'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isConnected
-                              ? Colors.green
-                              : Theme.of(context).colorScheme.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                          side: BorderSide(
-                            color: isConnected
-                                ? Colors.green
-                                : Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        onChanged: vm.updateNote,
-                        decoration: InputDecoration(
-                          labelText: 'Ghi chú buổi tập (tùy chọn)',
-                          filled: true,
-                          suffixIcon: const Icon(Icons.edit_note),
-                        ),
-                        maxLines: 2,
-                      ),
-                    const SizedBox(height: 24),
-                    _buildControls(context, vm),
-                    ],
+                      ],
+                    ),
+                    Icon(
+                      widget.workoutType.icon,
+                      size: 42,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Giờ hiện tại',
+                      value: DateFormat.Hm().format(DateTime.now()),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Calories',
+                      value: vm.calories.toStringAsFixed(1),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Nhịp tim',
+                      value: vm.heartRate != null
+                          ? '${vm.heartRate} bpm'
+                          : '--:--',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Nút kết nối thiết bị đo nhịp tim
+              OutlinedButton.icon(
+                onPressed: isConnected
+                    ? () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        await _heartRateService.disconnectDevice();
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Đã ngắt kết nối thiết bị')),
+                        );
+                      }
+                    : _showDeviceScanDialog,
+                icon: Icon(isConnected ? Icons.bluetooth_connected : Icons.bluetooth),
+                label: Text(isConnected ? 'Ngắt kết nối' : 'Kết nối thiết bị đo nhịp tim'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isConnected
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  side: BorderSide(
+                    color: isConnected
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                    width: 2,
                   ),
                 ),
               ),
-            );
-          },
+              const SizedBox(height: 12),
+              TextField(
+                onChanged: vm.updateNote,
+                decoration: InputDecoration(
+                  labelText: 'Ghi chú buổi tập (tùy chọn)',
+                  filled: true,
+                  suffixIcon: const Icon(Icons.edit_note),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              _buildControls(context, vm),
+            ],
+          ),
         ),
       ),
     );
@@ -538,7 +533,6 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 110,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
