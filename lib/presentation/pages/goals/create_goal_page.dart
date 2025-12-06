@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants/workout_types.dart';
 import '../../../core/helpers/activity_type_helper.dart';
+import '../../../core/services/goal_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../domain/entities/goal.dart';
+import '../../../domain/repositories/activity_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/goal_repository.dart';
 import '../../../domain/repositories/weight_history_repository.dart';
@@ -31,8 +34,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
   void initState() {
     super.initState();
     _selectedType = widget.goal?.goalType ?? GoalType.calories;
-    _targetController.text =
-        widget.goal?.targetValue.toStringAsFixed(1) ?? '';
+    _targetController.text = widget.goal?.targetValue.toStringAsFixed(1) ?? '';
     if (widget.goal?.goalType == GoalType.weight) {
       _weightLossMode = widget.goal?.direction != 'increase';
     }
@@ -41,6 +43,22 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
   }
 
   bool get isEditing => widget.goal != null;
+  
+  bool get _isOverdue {
+    if (widget.goal == null) return false;
+    if (widget.goal!.status == GoalStatus.completed) return false;
+    if (widget.goal!.deadline == null) return false;
+    final now = DateTime.now();
+    final deadlineEnd = DateTime(
+      widget.goal!.deadline!.year,
+      widget.goal!.deadline!.month,
+      widget.goal!.deadline!.day,
+      23,
+      59,
+      59,
+    );
+    return now.isAfter(deadlineEnd);
+  }
 
   @override
   void dispose() {
@@ -50,17 +68,27 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Tạo GoalService giống như GoalsPage
+    final goalService = GoalService(
+      activityRepository: context.read<ActivityRepository>(),
+      weightHistoryRepository: context.read<WeightHistoryRepository>(),
+      goalRepository: context.read<GoalRepository>(),
+      notificationService: context.read<NotificationService>(),
+    );
+
     return ChangeNotifierProvider(
       create: (_) => GoalFormViewModel(
         authRepository: context.read<AuthRepository>(),
         goalRepository: context.read<GoalRepository>(),
         weightHistoryRepository: context.read<WeightHistoryRepository>(),
+        goalService: goalService,
       ),
       child: Consumer<GoalFormViewModel>(
         builder: (context, vm, _) {
           return Scaffold(
             appBar: AppBar(
-              title: Text(isEditing ? 'Chỉnh sửa mục tiêu' : 'Đặt mục tiêu mới'),
+              title:
+                  Text(isEditing ? 'Chỉnh sửa mục tiêu' : 'Đặt mục tiêu mới'),
             ),
             body: SafeArea(
               child: SingleChildScrollView(
@@ -70,21 +98,74 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Cảnh báo nếu goal đã quá deadline
+                      if (isEditing && _isOverdue)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withAlpha(25),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.withAlpha(100),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.orange.shade700,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Mục tiêu đã hết hạn',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.orange.shade700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Mục tiêu này đã quá deadline. Bạn không thể chỉnh sửa các thông tin quan trọng.',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Colors.orange.shade700,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       _SectionTitle('Loại hoạt động'),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedActivityType,
                         decoration: _inputDecoration(),
                         items: _buildActivityTypeItems(),
-                        onChanged: vm.isSubmitting || isEditing
+                        onChanged: vm.isSubmitting || (isEditing && _isOverdue)
                             ? null
                             : (value) {
                                 setState(() {
                                   _selectedActivityType = value;
                                   // Nếu chọn indoor activity và đang chọn distance, đổi sang calories
                                   if (value != null) {
-                                    final meta = ActivityTypeHelper.resolve(value);
-                                    if (!meta.isOutdoor && _selectedType == GoalType.distance) {
+                                    final meta =
+                                        ActivityTypeHelper.resolve(value);
+                                    if (!meta.isOutdoor &&
+                                        _selectedType == GoalType.distance) {
                                       _selectedType = GoalType.calories;
                                     }
                                   }
@@ -103,7 +184,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                             child: Text(tf.displayName),
                           );
                         }).toList(),
-                        onChanged: vm.isSubmitting || isEditing
+                        onChanged: vm.isSubmitting || (isEditing && _isOverdue)
                             ? null
                             : (value) {
                                 if (value == null) return;
@@ -118,7 +199,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                         initialValue: _selectedType,
                         decoration: _inputDecoration(),
                         items: _buildGoalTypeItems(),
-                        onChanged: vm.isSubmitting || isEditing
+                        onChanged: vm.isSubmitting || (isEditing && _isOverdue)
                             ? null
                             : (value) {
                                 if (value == null) return;
@@ -138,6 +219,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                         decoration: _inputDecoration().copyWith(
                           hintText: _getTargetHint(),
                         ),
+                        enabled: !(isEditing && _isOverdue),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Vui lòng nhập giá trị mục tiêu';
@@ -160,7 +242,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                             ChoiceChip(
                               label: const Text('Giảm cân'),
                               selected: _weightLossMode,
-                              onSelected: vm.isSubmitting
+                              onSelected: (vm.isSubmitting || (isEditing && _isOverdue))
                                   ? null
                                   : (_) =>
                                       setState(() => _weightLossMode = true),
@@ -168,7 +250,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                             ChoiceChip(
                               label: const Text('Tăng cân'),
                               selected: !_weightLossMode,
-                              onSelected: vm.isSubmitting
+                              onSelected: (vm.isSubmitting || (isEditing && _isOverdue))
                                   ? null
                                   : (_) =>
                                       setState(() => _weightLossMode = false),
@@ -189,7 +271,9 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: vm.isSubmitting ? null : () => _submit(vm),
+                          onPressed: (vm.isSubmitting || (isEditing && _isOverdue))
+                              ? null
+                              : () => _submit(vm),
                           child: vm.isSubmitting
                               ? const SizedBox(
                                   width: 20,
@@ -198,7 +282,9 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : Text(isEditing ? 'Cập nhật mục tiêu' : 'Lưu mục tiêu'),
+                              : Text(isEditing
+                                  ? 'Cập nhật mục tiêu'
+                                  : 'Lưu mục tiêu'),
                         ),
                       ),
                     ],
@@ -289,6 +375,17 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
   }
 
   Future<void> _submit(GoalFormViewModel vm) async {
+    // Chặn submit nếu goal đã quá deadline
+    if (isEditing && _isOverdue) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể cập nhật mục tiêu đã hết hạn'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTimeFrame == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -352,4 +449,3 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
-

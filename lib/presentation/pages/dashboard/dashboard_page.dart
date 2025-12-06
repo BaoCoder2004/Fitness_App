@@ -716,7 +716,7 @@ class _RecentActivityCard extends StatelessWidget {
                 ),
                 _ActivityStatTile(
                   label: 'Năng lượng',
-                  value: '${activity!.calories.toStringAsFixed(0)} kcal',
+                  value: '${activity!.calories.toStringAsFixed(1)} kcal',
                 ),
                 _ActivityStatTile(
                   label: 'Thời gian',
@@ -819,7 +819,7 @@ class _HeroBanner extends StatelessWidget {
               Expanded(
                 child: _HeroChip(
                   label: 'Calories hôm nay',
-                  value: '${stats.totalCalories.toStringAsFixed(0)} kcal',
+                  value: '${stats.totalCalories.toStringAsFixed(1)} kcal',
                 ),
               ),
               const SizedBox(width: 12),

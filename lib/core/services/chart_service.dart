@@ -40,12 +40,22 @@ class ChartService {
       DateTime key;
       switch (range) {
         case TimeRange.day:
-          // Cho "Ngày": Hiển thị theo từng ngày (7 ngày gần nhất)
-          key = DateTime(
+          // Cho "Ngày": Chỉ hiển thị hôm qua và hôm nay
+          final activityDate = DateTime(
             activity.date.year,
             activity.date.month,
             activity.date.day,
           );
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final yesterday = todayDate.subtract(const Duration(days: 1));
+          
+          // Chỉ lấy dữ liệu của hôm qua và hôm nay
+          if (activityDate.isAtSameMomentAs(yesterday) || activityDate.isAtSameMomentAs(todayDate)) {
+            key = activityDate;
+          } else {
+            continue; // Bỏ qua các ngày khác
+          }
           break;
         case TimeRange.week:
           // Cho "Tuần": Hiển thị theo từng ngày trong tuần (không nhóm)
@@ -131,12 +141,22 @@ class ChartService {
       DateTime key;
       switch (range) {
         case TimeRange.day:
-          // Cho "Ngày": Hiển thị theo từng ngày (7 ngày gần nhất)
-          key = DateTime(
+          // Cho "Ngày": Chỉ hiển thị hôm qua và hôm nay
+          final recordDate = DateTime(
             record.recordedAt.year,
             record.recordedAt.month,
             record.recordedAt.day,
           );
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final yesterday = todayDate.subtract(const Duration(days: 1));
+          
+          // Chỉ lấy dữ liệu của hôm qua và hôm nay
+          if (recordDate.isAtSameMomentAs(yesterday) || recordDate.isAtSameMomentAs(todayDate)) {
+            key = recordDate;
+          } else {
+            continue; // Bỏ qua các ngày khác
+          }
           break;
         case TimeRange.week:
           // Cho "Tuần": Hiển thị theo từng ngày trong tuần (không nhóm)

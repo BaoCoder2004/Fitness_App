@@ -103,7 +103,7 @@ class _ActivitySummaryPageState extends State<ActivitySummaryPage> {
                       ),
                     _StatRow(
                       label: 'Calories',
-                      value: '${widget.session.calories.toStringAsFixed(0)} kcal',
+                      value: '${widget.session.calories.toStringAsFixed(1)} kcal',
                     ),
                     if (widget.session.averageHeartRate != null)
                       _StatRow(

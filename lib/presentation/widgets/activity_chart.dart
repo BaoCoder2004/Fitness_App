@@ -8,12 +8,14 @@ class ActivityChart extends StatelessWidget {
     required this.getXAxisLabel,
     required this.metricLabel,
     required this.color,
+    this.formatValue,
   });
 
   final List<MapEntry<DateTime, double>> dataPoints;
   final String Function(DateTime) getXAxisLabel;
   final String metricLabel;
   final Color color;
+  final String Function(double)? formatValue;
 
   @override
   Widget build(BuildContext context) {
@@ -119,8 +121,10 @@ class ActivityChart extends StatelessWidget {
                   final isOnTick = (ratio - ratio.round()).abs() < 1e-3;
                   if (!isOnTick) return const SizedBox.shrink();
 
-                  // Định dạng số nguyên (không hiển thị .0)
-                  final formattedValue = value.round().toString();
+                  // Format giá trị theo metric (không làm tròn, hiển thị đúng dữ liệu thực)
+                  final formattedValue = formatValue != null 
+                      ? formatValue!(value)
+                      : _defaultFormatValue(value, metricLabel);
                   
                   return Padding(
                     padding: const EdgeInsets.only(right: 6),
@@ -177,8 +181,12 @@ class ActivityChart extends StatelessWidget {
                   final index = touchedSpot.x.toInt();
                   if (index >= dataPoints.length) return null;
                   final date = dataPoints[index].key;
+                  // Format giá trị theo metric (không làm tròn, hiển thị đúng dữ liệu thực)
+                  final formattedValue = formatValue != null 
+                      ? formatValue!(touchedSpot.y)
+                      : _defaultFormatValue(touchedSpot.y, metricLabel);
                   return LineTooltipItem(
-                    '${touchedSpot.y.toStringAsFixed(1)} $metricLabel\n${getXAxisLabel(date)}',
+                    '$formattedValue $metricLabel\n${getXAxisLabel(date)}',
                     TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -191,6 +199,22 @@ class ActivityChart extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Format giá trị mặc định dựa trên metric label
+  String _defaultFormatValue(double value, String label) {
+    switch (label) {
+      case 'Kcal':
+        return value.toStringAsFixed(1);
+      case 'Km':
+        return value.toStringAsFixed(2);
+      case 'Phút':
+        return value.toStringAsFixed(1);
+      case 'Kg':
+        return value.toStringAsFixed(1);
+      default:
+        return value.toStringAsFixed(1);
+    }
   }
 }
 

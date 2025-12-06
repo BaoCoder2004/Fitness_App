@@ -306,10 +306,10 @@ class StatisticsViewModel extends ChangeNotifier {
 
     switch (_selectedRange) {
       case TimeRange.day:
-        // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
+        // Cho "Ngày": Chỉ lấy hôm nay và hôm qua để so sánh
         final today = DateTime.now();
-        final sevenDaysAgo = today.subtract(const Duration(days: 6));
-        start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
+        final yesterday = today.subtract(const Duration(days: 1));
+        start = DateTime(yesterday.year, yesterday.month, yesterday.day);
         end = DateTime(today.year, today.month, today.day, 23, 59, 59);
         break;
       case TimeRange.week:
@@ -377,10 +377,10 @@ class StatisticsViewModel extends ChangeNotifier {
 
       switch (_selectedRange) {
         case TimeRange.day:
-          // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
+          // Cho "Ngày": Chỉ lấy hôm nay và hôm qua để so sánh
           final today = DateTime.now();
-          final sevenDaysAgo = today.subtract(const Duration(days: 6));
-          start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
+          final yesterday = today.subtract(const Duration(days: 1));
+          start = DateTime(yesterday.year, yesterday.month, yesterday.day);
           end = DateTime(today.year, today.month, today.day, 23, 59, 59);
           break;
         case TimeRange.week:
@@ -539,10 +539,10 @@ class StatisticsViewModel extends ChangeNotifier {
 
     switch (_selectedRange) {
       case TimeRange.day:
-        // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
+        // Cho "Ngày": Chỉ lấy hôm nay và hôm qua để so sánh
         final today = DateTime.now();
-        final sevenDaysAgo = today.subtract(const Duration(days: 6));
-        start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
+        final yesterday = today.subtract(const Duration(days: 1));
+        start = DateTime(yesterday.year, yesterday.month, yesterday.day);
         end = DateTime(today.year, today.month, today.day, 23, 59, 59);
         break;
       case TimeRange.week:

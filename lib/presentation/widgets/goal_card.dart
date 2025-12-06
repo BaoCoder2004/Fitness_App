@@ -21,10 +21,26 @@ class GoalCard extends StatelessWidget {
 
   Goal get goal => progress.goal;
 
+  bool get _isOverdue {
+    if (goal.deadline == null) return false;
+    if (goal.status == GoalStatus.completed) return false;
+    final now = DateTime.now();
+    final deadlineEnd = DateTime(
+      goal.deadline!.year,
+      goal.deadline!.month,
+      goal.deadline!.day,
+      23,
+      59,
+      59,
+    );
+    return now.isAfter(deadlineEnd);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final bool isCompleted = goal.status == GoalStatus.completed;
+    final bool isOverdue = _isOverdue;
     
     // Ưu tiên hiển thị theo activityTypeFilter, nếu không có thì dùng goalType
     final activityMeta = goal.activityTypeFilter != null
@@ -33,8 +49,14 @@ class GoalCard extends StatelessWidget {
     final iconData = activityMeta?.icon ?? _resolveIcon(goal.goalType);
     final displayName = activityMeta?.displayName ?? goal.goalType.displayName;
     
-    final statusColor = isCompleted ? Colors.green : colorScheme.primary;
-    final bool canEdit = onEdit != null && !isCompleted;
+    // Màu sắc: completed = xanh lá, overdue = đỏ/cam, bình thường = primary
+    final statusColor = isCompleted
+        ? Colors.green
+        : isOverdue
+            ? Colors.orange
+            : colorScheme.primary;
+    // Chặn edit nếu goal đã completed hoặc đã quá deadline
+    final bool canEdit = onEdit != null && !isCompleted && !isOverdue;
     final bool canDelete = onDelete != null;
 
     return AnimatedContainer(
@@ -46,7 +68,10 @@ class GoalCard extends StatelessWidget {
         border: Border.all(
           color: isCompleted
               ? statusColor.withAlpha(80)
-              : Theme.of(context).colorScheme.outline.withAlpha(50),
+              : isOverdue
+                  ? statusColor.withAlpha(120)
+                  : Theme.of(context).colorScheme.outline.withAlpha(50),
+          width: isOverdue ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -85,12 +110,16 @@ class GoalCard extends StatelessWidget {
                       child: Text(
                         isCompleted
                             ? '🎉 Đã hoàn thành'
-                            : 'Đang theo dõi · ${goal.goalType.unitLabel}',
-                        key: ValueKey(isCompleted),
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: colorScheme.outline),
+                            : isOverdue
+                                ? '⚠️ Đã hết hạn'
+                                : 'Đang theo dõi · ${goal.goalType.unitLabel}',
+                        key: ValueKey('${isCompleted}_$isOverdue'),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isOverdue
+                                  ? statusColor
+                                  : colorScheme.outline,
+                              fontWeight: isOverdue ? FontWeight.w600 : null,
+                            ),
                       ),
                     ),
                   ],
@@ -157,7 +186,11 @@ class GoalCard extends StatelessWidget {
                   minHeight: 10,
                   backgroundColor: colorScheme.surfaceContainerHighest,
                   valueColor: AlwaysStoppedAnimation(
-                    isCompleted ? Colors.green : colorScheme.primary,
+                    isCompleted
+                        ? Colors.green
+                        : isOverdue
+                            ? statusColor
+                            : colorScheme.primary,
                   ),
                 );
               },
@@ -184,14 +217,20 @@ class GoalCard extends StatelessWidget {
           if (goal.deadline != null)
             Row(
               children: [
-                Icon(Icons.event, size: 16, color: colorScheme.outline),
+                Icon(
+                  isOverdue ? Icons.warning : Icons.event,
+                  size: 16,
+                  color: isOverdue ? statusColor : colorScheme.outline,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  'Trước: ${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: colorScheme.outline),
+                  isOverdue
+                      ? 'Đã hết hạn: ${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}'
+                      : 'Trước: ${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isOverdue ? statusColor : colorScheme.outline,
+                        fontWeight: isOverdue ? FontWeight.w500 : null,
+                      ),
                 ),
               ],
             ),

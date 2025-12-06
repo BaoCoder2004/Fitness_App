@@ -119,7 +119,7 @@ class _OutdoorTrackingView extends StatelessWidget {
                     child: _MetricTile(
                       label: 'Calories',
                       value:
-                          '${_estimateCalories(state, userWeight).toStringAsFixed(0)} kcal',
+                          '${_estimateCalories(state, userWeight).toStringAsFixed(1)} kcal',
                     ),
                   ),
                   const SizedBox(width: 12),

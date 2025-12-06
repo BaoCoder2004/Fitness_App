@@ -436,7 +436,7 @@ class _ActivityTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${session.calories.toStringAsFixed(0)} kcal',
+                  '${session.calories.toStringAsFixed(1)} kcal',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 if (session.distanceKm != null)

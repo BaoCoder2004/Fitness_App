@@ -85,7 +85,7 @@ class ActivityDetailPage extends StatelessWidget {
               ),
             _StatRow(
               label: 'Calories',
-              value: '${session.calories.toStringAsFixed(0)} kcal',
+              value: '${session.calories.toStringAsFixed(1)} kcal',
             ),
             if (session.averageHeartRate != null)
               _StatRow(

@@ -35,9 +35,9 @@ class HistoryService {
 
     switch (range) {
       case TimeRange.day:
-        // Cho "Ngày": Lấy 7 ngày gần nhất để có đủ dữ liệu hiển thị biểu đồ
-        final sevenDaysAgo = now.subtract(const Duration(days: 6));
-        start = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
+        // Cho "Ngày": Chỉ lấy hôm nay và hôm qua để so sánh
+        final yesterday = now.subtract(const Duration(days: 1));
+        start = DateTime(yesterday.year, yesterday.month, yesterday.day);
         break;
       case TimeRange.week:
         // referenceDate đã là thứ 2 của tuần được chọn

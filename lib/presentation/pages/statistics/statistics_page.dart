@@ -136,6 +136,19 @@ class _StatisticsContent extends StatelessWidget {
                                     metricLabel: vm.getMetricLabel(),
                                     color: _getMetricColor(
                                         vm.selectedMetric, context),
+                                    formatValue: (value) {
+                                      // Format theo từng metric để hiển thị đúng dữ liệu thực
+                                      switch (vm.selectedMetric) {
+                                        case ChartMetric.calories:
+                                          return value.toStringAsFixed(1);
+                                        case ChartMetric.distance:
+                                          return value.toStringAsFixed(2);
+                                        case ChartMetric.duration:
+                                          return value.toStringAsFixed(1);
+                                        case ChartMetric.weight:
+                                          return value.toStringAsFixed(1);
+                                      }
+                                    },
                                   ),
                                 ),
                         ),
@@ -463,17 +476,76 @@ class _SummaryStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dataPoints = viewModel.sortedDataPoints;
-    if (dataPoints.isEmpty) {
-      return const SizedBox.shrink();
+    final detailedStats = viewModel.detailedStats;
+    
+    // Ưu tiên dùng detailedStats để đồng bộ với "Thống kê trung bình"
+    // Nếu không có detailedStats, fallback về chart data
+    double total;
+    double average;
+    double max;
+    double min;
+    
+    if (detailedStats != null && viewModel.selectedMetric != ChartMetric.weight) {
+      // Dùng detailedStats để đảm bảo đồng bộ với "Thống kê trung bình"
+      final current = detailedStats.current;
+      switch (viewModel.selectedMetric) {
+        case ChartMetric.calories:
+          total = current.totalCalories;
+          average = current.averageCaloriesPerDay;
+          break;
+        case ChartMetric.distance:
+          total = current.totalDistanceKm;
+          average = current.averageDistancePerDay;
+          break;
+        case ChartMetric.duration:
+          // totalDurationHours là giờ, cần convert sang phút để khớp với label "Phút"
+          total = current.totalDurationHours * 60.0;
+          // averageDurationMinutesPerDay đã là phút/ngày rồi, không cần convert
+          average = current.averageDurationMinutesPerDay;
+          break;
+        case ChartMetric.weight:
+          // Không dùng detailedStats cho weight
+          total = 0;
+          average = 0;
+          break;
+      }
+      
+      // Max và min vẫn lấy từ chart data (vì detailedStats không có max/min)
+      max = viewModel.maxValue ??
+          (dataPoints.isNotEmpty
+              ? dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b)
+              : 0);
+      min = viewModel.minValue ??
+          (dataPoints.isNotEmpty
+              ? dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b)
+              : 0);
+    } else {
+      // Fallback về chart data nếu không có detailedStats hoặc là weight
+      if (dataPoints.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      total = dataPoints.map((e) => e.value).reduce((a, b) => a + b);
+      average = total / dataPoints.length;
+      max = viewModel.maxValue ??
+          dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+      min = viewModel.minValue ??
+          dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
     }
-
-    final total = dataPoints.map((e) => e.value).reduce((a, b) => a + b);
-    final average = total / dataPoints.length;
-    // Sử dụng maxValue và minValue từ viewModel để lấy giá trị chính xác từ dữ liệu gốc
-    final max = viewModel.maxValue ??
-        dataPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    final min = viewModel.minValue ??
-        dataPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b);
+    
+    // Format theo từng metric để đồng bộ với "Thống kê trung bình"
+    String formatValue(double value) {
+      switch (viewModel.selectedMetric) {
+        case ChartMetric.calories:
+          // Hiển thị 1 chữ số thập phân để chính xác với số liệu thực tế
+          return value.toStringAsFixed(1);
+        case ChartMetric.distance:
+          return value.toStringAsFixed(2); // 2 chữ số thập phân
+        case ChartMetric.duration:
+          return value.toStringAsFixed(1); // 1 chữ số thập phân
+        case ChartMetric.weight:
+          return value.toStringAsFixed(1); // 1 chữ số thập phân
+      }
+    }
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -501,15 +573,14 @@ class _SummaryStats extends StatelessWidget {
                   Expanded(
                     child: _StatItem(
                       label: 'Tổng',
-                      // Giữ chi tiết hơn (2 chữ số thập phân) để không gây hiểu nhầm khi dữ liệu nhỏ
-                      value: total.toStringAsFixed(2),
+                      value: formatValue(total),
                       unit: viewModel.getMetricLabel(),
                     ),
                   ),
                   Expanded(
                     child: _StatItem(
                       label: 'Trung bình',
-                      value: average.toStringAsFixed(2),
+                      value: formatValue(average),
                       unit: viewModel.getMetricLabel(),
                     ),
                   ),
@@ -522,14 +593,14 @@ class _SummaryStats extends StatelessWidget {
                 Expanded(
                   child: _StatItem(
                     label: 'Cao nhất',
-                    value: max.toStringAsFixed(2),
+                    value: formatValue(max),
                     unit: viewModel.getMetricLabel(),
                   ),
                 ),
                 Expanded(
                   child: _StatItem(
                     label: 'Thấp nhất',
-                    value: min.toStringAsFixed(2),
+                    value: formatValue(min),
                     unit: viewModel.getMetricLabel(),
                   ),
                 ),
@@ -835,9 +906,9 @@ class _DetailedStatsSection extends StatelessWidget {
               title: 'Calories',
               icon: Icons.local_fire_department,
               color: const Color(0xFFE64A19),
-              totalText: '${current.totalCalories.toStringAsFixed(0)} kcal',
+              totalText: '${current.totalCalories.toStringAsFixed(1)} kcal',
               averageText:
-                  '${current.averageCaloriesPerDay.toStringAsFixed(0)} kcal/ngày',
+                  '${current.averageCaloriesPerDay.toStringAsFixed(1)} kcal/ngày',
             ),
             _DetailedMetricCard(
               title: 'Quãng đường',
@@ -853,7 +924,7 @@ class _DetailedStatsSection extends StatelessWidget {
               color: const Color(0xFF5E35B1),
               totalText: '${current.totalDurationHours.toStringAsFixed(1)} giờ',
               averageText:
-                  '${current.averageDurationMinutesPerDay.toStringAsFixed(0)} phút/ngày',
+                  '${current.averageDurationMinutesPerDay.toStringAsFixed(1)} phút/ngày',
             ),
           ],
         ),

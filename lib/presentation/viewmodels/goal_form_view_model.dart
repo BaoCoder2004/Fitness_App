@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/services/goal_service.dart';
 import '../../domain/entities/goal.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/goal_repository.dart';
@@ -12,13 +13,16 @@ class GoalFormViewModel extends ChangeNotifier {
     required AuthRepository authRepository,
     required GoalRepository goalRepository,
     required WeightHistoryRepository weightHistoryRepository,
+    required GoalService goalService,
   })  : _authRepository = authRepository,
         _goalRepository = goalRepository,
-        _weightHistoryRepository = weightHistoryRepository;
+        _weightHistoryRepository = weightHistoryRepository,
+        _goalService = goalService;
 
   final AuthRepository _authRepository;
   final GoalRepository _goalRepository;
   final WeightHistoryRepository _weightHistoryRepository;
+  final GoalService _goalService;
 
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -57,8 +61,10 @@ class GoalFormViewModel extends ChangeNotifier {
       // Tính deadline tự động từ timeFrame
       final deadline = _calculateDeadline(now, timeFrame);
 
+      // Tạo goal với offline ID nếu chưa có
+      final goalId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
       final goal = Goal(
-        id: '',
+        id: goalId,
         userId: userId,
         goalType: goalType,
         targetValue: targetValue,
@@ -78,7 +84,14 @@ class GoalFormViewModel extends ChangeNotifier {
       );
 
       _setError(null);
-      unawaited(_goalRepository.createGoal(goal).catchError((e) {
+      
+      // Tạo goal (async, không block UI)
+      unawaited(_goalRepository.createGoal(goal).then((_) async {
+        // Setup reminder sau khi tạo goal thành công
+        // Sử dụng goal object với id đã được set
+        await _goalService.setupGoalReminder(goal);
+        debugPrint('[GoalFormViewModel] ✅ Goal created and reminder setup for goal ${goal.id}');
+      }).catchError((e) {
         debugPrint('Deferred goal creation failed: $e');
         _setError('Không thể đồng bộ mục tiêu. Vui lòng mở lại app khi có mạng.');
       }));
@@ -127,6 +140,11 @@ class GoalFormViewModel extends ChangeNotifier {
         timeFrame: newTimeFrame,
       );
       await _goalRepository.updateGoal(updatedGoal);
+      
+      // Setup reminder sau khi cập nhật goal (đặc biệt khi reminder settings thay đổi)
+      await _goalService.setupGoalReminder(updatedGoal);
+      debugPrint('[GoalFormViewModel] ✅ Goal updated and reminder setup for goal ${updatedGoal.id}');
+      
       _setError(null);
       return true;
     } catch (e) {
