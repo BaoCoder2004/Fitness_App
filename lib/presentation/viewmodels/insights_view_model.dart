@@ -71,21 +71,29 @@ class InsightsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Kiểm tra và tự động tạo insight hàng tuần nếu đã đến cuối tuần
+  /// Kiểm tra và tự động tạo insight hàng tuần vào Chủ nhật
   Future<void> _checkAndCreateWeeklyInsight() async {
     final now = DateTime.now();
     final weekday = now.weekday; // 1 = Monday, 7 = Sunday
     
-    // Chỉ tạo vào cuối tuần (thứ 6, thứ 7, hoặc chủ nhật)
-    if (weekday < 5) {
-      return; // Chưa đến cuối tuần
+    // Chỉ tạo vào Chủ nhật (cuối tuần)
+    if (weekday != 7) {
+      return; // Chưa đến Chủ nhật
     }
 
-    // Kiểm tra xem đã có insight tuần này chưa
-    final thisWeekStart = now.subtract(Duration(days: weekday - 1));
+    // Kiểm tra xem đã có insight tuần này chưa (từ Thứ 2 tuần này đến hôm nay)
+    // Tính Thứ 2 tuần này 00:00:00
+    final today = DateTime(now.year, now.month, now.day);
+    final thisWeekStart = today.subtract(Duration(days: weekday - 1));
     final hasWeeklyInsightThisWeek = _insights.any((insight) {
-      return insight.createdAt.isAfter(thisWeekStart) &&
-          insight.insightType == InsightType.general;
+      if (insight.insightType != InsightType.general) return false;
+      final insightDate = DateTime(
+        insight.createdAt.year,
+        insight.createdAt.month,
+        insight.createdAt.day,
+      );
+      // Kiểm tra xem insight có được tạo từ Thứ 2 tuần này trở đi không
+      return !insightDate.isBefore(thisWeekStart);
     });
 
     if (hasWeeklyInsightThisWeek) {

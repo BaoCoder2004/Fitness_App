@@ -56,11 +56,15 @@ class _ActivityPageState extends State<ActivityPage>
                     controller: _tabController,
                     indicatorPadding: const EdgeInsets.all(3),
                     indicator: BoxDecoration(
-                      color: colorScheme.primary.withAlpha(200),
+                      color: colorScheme.primary,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     labelColor: Colors.white,
-                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelColor: colorScheme.onSurface,
+                    dividerColor: Colors.transparent,
                     tabs: const [
                       _FilledTab(label: 'Bắt đầu'),
                       _FilledTab(label: 'Lịch sử'),
@@ -94,10 +98,7 @@ class _FilledTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tab(
       child: Center(
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
+        child: Text(label),
       ),
     );
   }

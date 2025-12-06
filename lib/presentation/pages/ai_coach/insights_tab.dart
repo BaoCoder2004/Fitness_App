@@ -243,6 +243,7 @@ class _InsightsTabState extends State<InsightsTab> {
   }
 
   Widget _buildFilterChips(InsightsViewModel viewModel) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SingleChildScrollView(
@@ -251,18 +252,43 @@ class _InsightsTabState extends State<InsightsTab> {
         child: Row(
           children: [
             FilterChip(
-              label: const Text('Tất cả'),
+              label: Text(
+                'Tất cả',
+                style: TextStyle(
+                  color: viewModel.selectedFilter == null
+                      ? Colors.white
+                      : theme.colorScheme.onSurface,
+                  fontWeight: viewModel.selectedFilter == null
+                      ? FontWeight.w600
+                      : FontWeight.normal,
+                ),
+              ),
               selected: viewModel.selectedFilter == null,
               onSelected: (_) => viewModel.clearFilter(),
+              selectedColor: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surface,
+              checkmarkColor: Colors.white,
             ),
             const SizedBox(width: 8),
             ...InsightType.values.map((type) {
+              final isSelected = viewModel.selectedFilter == type;
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: FilterChip(
-                  label: Text(_getInsightTypeLabel(type)),
-                  selected: viewModel.selectedFilter == type,
+                  label: Text(
+                    _getInsightTypeLabel(type),
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : theme.colorScheme.onSurface,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  selected: isSelected,
                   onSelected: (_) => viewModel.setFilter(type),
+                  selectedColor: theme.colorScheme.primary,
+                  backgroundColor: theme.colorScheme.surface,
+                  checkmarkColor: Colors.white,
                 ),
               );
             }),

@@ -388,16 +388,7 @@ class _ChatTabState extends State<ChatTab> {
 
           return Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Theme.of(context).colorScheme.primary.withOpacity(0.03),
-                  Theme.of(context).colorScheme.surface,
-                  Theme.of(context).colorScheme.surface,
-                ],
-                stops: const [0.0, 0.1, 1.0],
-              ),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
             ),
             child: Column(
               children: [
@@ -480,15 +471,7 @@ class _ChatTabState extends State<ChatTab> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.colorScheme.primary.withOpacity(0.05),
-              Colors.white,
-              theme.colorScheme.tertiary.withOpacity(0.03),
-            ],
-          ),
+          color: theme.colorScheme.primary.withOpacity(0.05),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -500,14 +483,7 @@ class _ChatTabState extends State<ChatTab> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      theme.colorScheme.primary.withOpacity(0.1),
-                      theme.colorScheme.tertiary.withOpacity(0.1),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: theme.colorScheme.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -708,20 +684,12 @@ class _ChatTabState extends State<ChatTab> {
             Consumer<ChatViewModel>(
               builder: (context, vm, _) {
                 return Container(
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: vm.isTyping
-                          ? [
-                              theme.colorScheme.primary.withOpacity(0.5),
-                              theme.colorScheme.primary.withOpacity(0.3),
-                            ]
-                          : [
-                              theme.colorScheme.primary,
-                              theme.colorScheme.primary.withOpacity(0.8),
-                            ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: vm.isTyping
+                        ? theme.colorScheme.primary.withOpacity(0.5)
+                        : theme.colorScheme.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -735,15 +703,12 @@ class _ChatTabState extends State<ChatTab> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: vm.isTyping ? null : () => _sendMessage(viewModel),
-                      borderRadius: BorderRadius.circular(28),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        padding: const EdgeInsets.all(16),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Center(
                         child: vm.isTyping
                             ? const SizedBox(
-                                width: 24,
-                                height: 24,
+                                width: 20,
+                                height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
@@ -753,7 +718,7 @@ class _ChatTabState extends State<ChatTab> {
                             : const Icon(
                                 Icons.send_rounded,
                                 color: Colors.white,
-                                size: 24,
+                                size: 22,
                               ),
                       ),
                     ),
