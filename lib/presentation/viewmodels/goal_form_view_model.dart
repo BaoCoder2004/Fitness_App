@@ -93,11 +93,21 @@ class GoalFormViewModel extends ChangeNotifier {
         debugPrint('[GoalFormViewModel] ✅ Goal created and reminder setup for goal ${goal.id}');
       }).catchError((e) {
         debugPrint('Deferred goal creation failed: $e');
-        _setError('Không thể đồng bộ mục tiêu. Vui lòng mở lại app khi có mạng.');
+        if (e.toString().contains('network') || e.toString().contains('Network') || e.toString().contains('permission-denied')) {
+          _setError('Không thể đồng bộ mục tiêu lên server. Vui lòng kiểm tra kết nối mạng và thử lại.');
+        } else {
+          _setError('Không thể lưu mục tiêu. Vui lòng thử lại sau.');
+        }
       }));
       return true;
     } catch (e) {
-      _setError('Không thể tạo mục tiêu. Vui lòng thử lại.');
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _setError('Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.');
+      } else if (e.toString().contains('permission-denied')) {
+        _setError('Không có quyền tạo mục tiêu. Vui lòng đăng nhập lại.');
+      } else {
+        _setError('Không thể tạo mục tiêu. Vui lòng kiểm tra thông tin và thử lại.');
+      }
       return false;
     } finally {
       _setSubmitting(false);
@@ -148,7 +158,15 @@ class GoalFormViewModel extends ChangeNotifier {
       _setError(null);
       return true;
     } catch (e) {
-      _setError('Không thể cập nhật mục tiêu. Vui lòng thử lại.');
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _setError('Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.');
+      } else if (e.toString().contains('permission-denied')) {
+        _setError('Không có quyền cập nhật mục tiêu. Vui lòng đăng nhập lại.');
+      } else if (e.toString().contains('not-found')) {
+        _setError('Mục tiêu không tồn tại hoặc đã bị xóa.');
+      } else {
+        _setError('Không thể cập nhật mục tiêu. Vui lòng kiểm tra thông tin và thử lại.');
+      }
       return false;
     } finally {
       _setSubmitting(false);

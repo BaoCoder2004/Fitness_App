@@ -1,1 +1,24 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fitness-6c602","appId":"1:393862044910:android:16c5fdb5870021d07ce7ff","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fitness-6c602","configurations":{"android":"1:393862044910:android:16c5fdb5870021d07ce7ff"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fitness-6c602",
+          "appId": "1:393862044910:android:16c5fdb5870021d07ce7ff",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fitness-6c602",
+          "configurations": {
+            "android": "1:393862044910:android:16c5fdb5870021d07ce7ff"
+          }
+        }
+      }
+    }
+  }
+}

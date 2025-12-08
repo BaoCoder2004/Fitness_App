@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Allow read includes both get and list operations
+      // For admin panel: allow reading all users (we'll check admin role in app code)
+      allow read: if isAuthenticated();
+      
+      // Allow users to create their own profile
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Allow users to update their own profile
+      // For admin: allow updating any user (we'll check admin role in app code)
+      allow update: if isAuthenticated();
+      
+      // Allow delete (admin only, checked in app code)
+      allow delete: if isAuthenticated();
+      
+      // Sub-collections under users (activities, goals, etc.)
+      match /{subCollection=**} {
+        // Users can read/write their own sub-collections
+        // Admin can read/write all (checked in app code)
+        allow read, write: if isAuthenticated();
+      }
+    }
+    
+    // Activities collection (if exists at root level)
+    match /activities/{activityId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Goals collection (if exists at root level)
+    match /goals/{goalId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Chat conversations
+    match /conversations/{conversationId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // AI Insights
+    match /insights/{insightId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Other collections - allow authenticated users
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
+

@@ -112,7 +112,6 @@ class FirestoreChatRepository implements ChatRepository {
       final doc = await conversationDoc.get();
       
       if (doc.exists && doc.data() != null) {
-        final existingMessages = (doc.data()!['messages'] as List<dynamic>? ?? []);
         await conversationDoc.update({
           'messages': FieldValue.arrayUnion([messageMap]),
           'updatedAt': FieldValue.serverTimestamp(),

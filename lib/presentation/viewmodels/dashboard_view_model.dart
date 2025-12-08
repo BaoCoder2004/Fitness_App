@@ -75,7 +75,13 @@ class DashboardViewModel extends ChangeNotifier {
           .listen(_updateFromActivities);
       _setError(null);
     } catch (e) {
-      _setError('Không thể tải dữ liệu dashboard');
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _setError('Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.');
+      } else if (e.toString().contains('permission-denied')) {
+        _setError('Không có quyền xem dữ liệu dashboard. Vui lòng đăng nhập lại.');
+      } else {
+        _setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
+      }
     } finally {
       _setLoading(false);
     }

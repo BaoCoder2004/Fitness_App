@@ -16,6 +16,8 @@ class UserProfileModel extends UserProfile {
     super.language,
     super.createdAt,
     super.updatedAt,
+    super.role,
+    super.status,
   });
 
   factory UserProfileModel.fromMap(Map<String, dynamic> data) {
@@ -32,6 +34,8 @@ class UserProfileModel extends UserProfile {
       language: data['language'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      role: data['role'] as String? ?? 'user',
+      status: data['status'] as String? ?? 'active',
     );
   }
 
@@ -49,6 +53,8 @@ class UserProfileModel extends UserProfile {
       'language': language,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'role': role ?? 'user',
+      'status': status ?? 'active',
     };
   }
 }

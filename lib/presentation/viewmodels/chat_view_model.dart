@@ -65,7 +65,13 @@ class ChatViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = 'Không thể tải lịch sử chat: ${e.toString()}';
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _error = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('permission-denied')) {
+        _error = 'Không có quyền xem lịch sử chat. Vui lòng đăng nhập lại.';
+      } else {
+        _error = 'Không thể tải lịch sử chat. Vui lòng thử lại sau.';
+      }
       _isLoading = false;
       notifyListeners();
     }
@@ -168,7 +174,18 @@ class ChatViewModel extends ChangeNotifier {
       debugPrint('Stacktrace: $stack');
 
       _isTyping = false;
-      _error = 'Không thể gửi tin nhắn. Vui lòng thử lại.';
+      // Kiểm tra loại lỗi cụ thể
+      if (e.toString().contains('network') || e.toString().contains('Network') || e.toString().contains('SocketException')) {
+        _error = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        _error = 'Kết nối quá lâu. Vui lòng kiểm tra kết nối mạng và thử lại.';
+      } else if (e.toString().contains('API') || e.toString().contains('api') || e.toString().contains('key')) {
+        _error = 'Lỗi cấu hình AI. Vui lòng liên hệ hỗ trợ.';
+      } else if (e.toString().contains('rate') || e.toString().contains('quota') || e.toString().contains('limit')) {
+        _error = 'Đã vượt quá giới hạn yêu cầu. Vui lòng thử lại sau vài phút.';
+      } else {
+        _error = 'Không thể gửi tin nhắn. Vui lòng thử lại sau.';
+      }
       notifyListeners();
 
       // Xóa user message nếu có lỗi (optional)
@@ -185,7 +202,13 @@ class ChatViewModel extends ChangeNotifier {
       _error = null;
       notifyListeners();
     } catch (e) {
-      _error = 'Không thể xóa lịch sử chat: ${e.toString()}';
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _error = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('permission-denied')) {
+        _error = 'Không có quyền xóa lịch sử chat. Vui lòng đăng nhập lại.';
+      } else {
+        _error = 'Không thể xóa lịch sử chat. Vui lòng thử lại sau.';
+      }
       notifyListeners();
     }
   }
@@ -213,7 +236,15 @@ class ChatViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = 'Không thể tải cuộc hội thoại: ${e.toString()}';
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _error = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('permission-denied')) {
+        _error = 'Không có quyền xem cuộc hội thoại. Vui lòng đăng nhập lại.';
+      } else if (e.toString().contains('not-found')) {
+        _error = 'Cuộc hội thoại không tồn tại hoặc đã bị xóa.';
+      } else {
+        _error = 'Không thể tải cuộc hội thoại. Vui lòng thử lại sau.';
+      }
       _isLoading = false;
       notifyListeners();
     }
@@ -239,7 +270,13 @@ class ChatViewModel extends ChangeNotifier {
         startNewConversation();
       }
     } catch (e) {
-      _error = 'Không thể xóa cuộc hội thoại: ${e.toString()}';
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _error = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('permission-denied')) {
+        _error = 'Không có quyền xóa cuộc hội thoại. Vui lòng đăng nhập lại.';
+      } else {
+        _error = 'Không thể xóa cuộc hội thoại. Vui lòng thử lại sau.';
+      }
       notifyListeners();
     }
   }

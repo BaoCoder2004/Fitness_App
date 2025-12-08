@@ -54,10 +54,58 @@ class AuthGate extends StatelessWidget {
             if (!refreshedUser.emailVerified) {
               return const EmailVerificationPage();
             }
-            return AppNavShell(
-              authRepository: authRepository,
-              userProfileRepository: context.read<UserProfileRepository>(),
-              weightHistoryRepository: context.read<WeightHistoryRepository>(),
+            
+            // Kiểm tra role - chặn admin vào mobile app
+            return FutureBuilder(
+              future: context.read<UserProfileRepository>().fetchProfile(refreshedUser.uid),
+              builder: (context, profileSnapshot) {
+                if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final profile = profileSnapshot.data;
+                if (profile?.role == 'admin') {
+                  // Admin không được vào mobile app
+                  // Hiển thị thông báo trước khi sign out
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Tài khoản admin không thể đăng nhập vào ứng dụng mobile. Vui lòng sử dụng admin panel.'),
+                          duration: Duration(seconds: 5),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  });
+                  Future.microtask(() => authRepository.signOut());
+                  return const LoginPage();
+                }
+                if (profile?.status == 'blocked') {
+                  // User bị khóa không được vào mobile app
+                  // Hiển thị thông báo trước khi sign out
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.'),
+                          duration: Duration(seconds: 5),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  });
+                  Future.microtask(() => authRepository.signOut());
+                  return const LoginPage();
+                }
+                
+                return AppNavShell(
+                  authRepository: authRepository,
+                  userProfileRepository: context.read<UserProfileRepository>(),
+                  weightHistoryRepository: context.read<WeightHistoryRepository>(),
+                );
+              },
             );
           },
         );

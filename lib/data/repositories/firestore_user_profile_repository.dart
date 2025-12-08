@@ -78,5 +78,15 @@ class FirestoreUserProfileRepository implements UserProfileRepository {
 
     return _collection.doc(profile.uid).update(data);
   }
+
+  @override
+  Stream<UserProfile?> watchProfile(String uid) {
+    return _collection.doc(uid).snapshots().map((snapshot) {
+      if (!snapshot.exists) return null;
+      final data = snapshot.data();
+      if (data == null) return null;
+      return UserProfileModel.fromMap({...data, 'uid': uid});
+    });
+  }
 }
 

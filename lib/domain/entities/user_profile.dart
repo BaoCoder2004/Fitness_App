@@ -12,6 +12,8 @@ class UserProfile {
     this.language,
     this.createdAt,
     this.updatedAt,
+    this.role,
+    this.status,
   });
 
   final String uid;
@@ -26,6 +28,8 @@ class UserProfile {
   final String? language;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? role; // 'user' or 'admin'
+  final String? status; // 'active' or 'blocked'
 
   UserProfile copyWith({
     String? name,
@@ -42,6 +46,8 @@ class UserProfile {
     String? theme,
     String? language,
     DateTime? updatedAt,
+    String? role,
+    String? status,
   }) {
     return UserProfile(
       uid: uid,
@@ -57,6 +63,8 @@ class UserProfile {
       language: language ?? this.language,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      role: role ?? this.role,
+      status: status ?? this.status,
     );
   }
 }

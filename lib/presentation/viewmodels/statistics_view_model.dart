@@ -276,7 +276,14 @@ class StatisticsViewModel extends ChangeNotifier {
       _weightRecords = [];
       _chartData = {};
       _streak = null;
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      // Tạo error message cụ thể hơn
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _errorMessage = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('permission-denied')) {
+        _errorMessage = 'Không có quyền xem thống kê. Vui lòng đăng nhập lại.';
+      } else {
+        _errorMessage = 'Không thể tải dữ liệu thống kê. Vui lòng thử lại sau.';
+      }
     }
 
     _loading = false;

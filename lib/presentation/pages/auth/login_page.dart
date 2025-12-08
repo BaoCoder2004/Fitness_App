@@ -21,12 +21,28 @@ class _LoginPageState extends State<LoginPage> {
   bool _rememberMe = false;
   bool _passwordVisible = false;
   bool _isGoogleLoading = false;
+  String? _lastDisplayedError; // Track error đã hiển thị để tránh hiển thị lại
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    // Reset last displayed error khi dispose để tránh hiển thị lại khi quay lại page
+    _lastDisplayedError = null;
     super.dispose();
+  }
+  
+  @override
+  void initState() {
+    super.initState();
+    // Clear error message khi vào LoginPage để tránh hiển thị thông báo lỗi cũ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final viewModel = context.read<AuthViewModel>();
+        viewModel.clearError();
+        _lastDisplayedError = null;
+      }
+    });
   }
 
   Future<void> _onSubmit() async {
@@ -40,8 +56,17 @@ class _LoginPageState extends State<LoginPage> {
       );
     } catch (_) {
       final message = viewModel.errorMessage;
-      if (message != null && mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(message)));
+      if (message != null && mounted && message != _lastDisplayedError) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
+        );
+        _lastDisplayedError = message;
+        // Clear error sau khi hiển thị để tránh hiển thị lại
+        viewModel.clearError();
       }
     }
   }
@@ -74,6 +99,32 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final viewModel = context.watch<AuthViewModel>();
     final isLoading = viewModel.isLoading;
+    final errorMessage = viewModel.errorMessage;
+    
+    // Hiển thị error message nếu có và chưa được hiển thị trước đó
+    // (Trường hợp này dành cho khi user bị sign out từ AuthGate/AppNavShell)
+    if (errorMessage != null && 
+        errorMessage != _lastDisplayedError && 
+        mounted && 
+        !isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && 
+            viewModel.errorMessage == errorMessage && 
+            errorMessage != _lastDisplayedError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              duration: const Duration(seconds: 5),
+              backgroundColor: Colors.red,
+            ),
+          );
+          _lastDisplayedError = errorMessage;
+          // Clear error sau khi hiển thị
+          viewModel.clearError();
+        }
+      });
+    }
+    
     return Scaffold(
       appBar: AppBar(title: const Text('Đăng nhập')),
       body: SingleChildScrollView(
@@ -165,10 +216,17 @@ class _LoginPageState extends State<LoginPage> {
                             await authViewModel.signInWithGoogle();
                           } catch (_) {
                             final message = authViewModel.errorMessage;
-                            if (message != null && mounted) {
+                            if (message != null && mounted && message != _lastDisplayedError) {
                               messenger.showSnackBar(
-                                SnackBar(content: Text(message)),
+                                SnackBar(
+                                  content: Text(message),
+                                  duration: const Duration(seconds: 5),
+                                  backgroundColor: Colors.red,
+                                ),
                               );
+                              _lastDisplayedError = message;
+                              // Clear error sau khi hiển thị để tránh hiển thị lại
+                              authViewModel.clearError();
                             }
                           } finally {
                             if (mounted) {

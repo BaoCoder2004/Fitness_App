@@ -63,7 +63,13 @@ class InsightsViewModel extends ChangeNotifier {
         debugPrint('❌ Lỗi khi check weekly insight: $e');
       });
     } catch (e) {
-      _error = 'Không thể tải insights: $e';
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _error = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('permission-denied')) {
+        _error = 'Không có quyền xem insights. Vui lòng đăng nhập lại.';
+      } else {
+        _error = 'Không thể tải insights. Vui lòng thử lại sau.';
+      }
       debugPrint('❌ Lỗi khi load insights: $e');
     } finally {
       _isLoading = false;
@@ -220,14 +226,20 @@ class InsightsViewModel extends ChangeNotifier {
       
       // Tạo error message thân thiện hơn
       String errorMessage = 'Không thể tạo insight';
-      if (e.toString().contains('JSON')) {
-        errorMessage = 'Lỗi định dạng dữ liệu từ AI. Vui lòng thử lại.';
-      } else if (e.toString().contains('API')) {
-        errorMessage = 'Lỗi kết nối với AI. Vui lòng kiểm tra kết nối mạng.';
-      } else if (e.toString().contains('GEMINI_API_KEY')) {
-        errorMessage = 'API key chưa được cấu hình. Vui lòng kiểm tra file .env';
+      if (e.toString().contains('network') || e.toString().contains('Network') || e.toString().contains('SocketException')) {
+        errorMessage = 'Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        errorMessage = 'Kết nối quá lâu. Vui lòng kiểm tra kết nối mạng và thử lại.';
+      } else if (e.toString().contains('JSON') || e.toString().contains('format')) {
+        errorMessage = 'Lỗi định dạng dữ liệu từ AI. Vui lòng thử lại sau.';
+      } else if (e.toString().contains('API') || e.toString().contains('api') || e.toString().contains('GEMINI_API_KEY')) {
+        errorMessage = 'Lỗi cấu hình AI. Vui lòng kiểm tra API key trong file .env.';
+      } else if (e.toString().contains('rate') || e.toString().contains('quota') || e.toString().contains('limit')) {
+        errorMessage = 'Đã vượt quá giới hạn yêu cầu AI. Vui lòng thử lại sau vài phút.';
+      } else if (e.toString().contains('permission-denied')) {
+        errorMessage = 'Không có quyền tạo insight. Vui lòng đăng nhập lại.';
       } else {
-        errorMessage = 'Lỗi: ${e.toString()}';
+        errorMessage = 'Không thể tạo insight. Vui lòng thử lại sau.';
       }
       
       _error = errorMessage;

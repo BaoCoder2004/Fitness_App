@@ -63,13 +63,25 @@ class GoalListViewModel extends ChangeNotifier {
               .toList();
           _setError(null);
         } catch (e) {
-          _setError('Không thể tải mục tiêu. Vui lòng thử lại.');
+          if (e.toString().contains('network') || e.toString().contains('Network')) {
+            _setError('Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.');
+          } else if (e.toString().contains('permission-denied')) {
+            _setError('Không có quyền xem mục tiêu. Vui lòng đăng nhập lại.');
+          } else {
+            _setError('Không thể tải danh sách mục tiêu. Vui lòng thử lại sau.');
+          }
         } finally {
           _setLoading(false);
         }
       },
-      onError: (_) {
-        _setError('Không thể tải mục tiêu. Vui lòng thử lại.');
+      onError: (error) {
+        if (error.toString().contains('network') || error.toString().contains('Network')) {
+          _setError('Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.');
+        } else if (error.toString().contains('permission-denied')) {
+          _setError('Không có quyền xem mục tiêu. Vui lòng đăng nhập lại.');
+        } else {
+          _setError('Không thể tải danh sách mục tiêu. Vui lòng thử lại sau.');
+        }
         _setLoading(false);
       },
     );

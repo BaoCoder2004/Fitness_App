@@ -72,7 +72,13 @@ class UserProfileViewModel extends ChangeNotifier {
       });
       _setError(null);
     } catch (e) {
-      _setError('Không thể tải hồ sơ. Vui lòng thử lại.');
+      if (e.toString().contains('network') || e.toString().contains('Network')) {
+        _setError('Không có kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.');
+      } else if (e.toString().contains('permission-denied')) {
+        _setError('Không có quyền xem hồ sơ. Vui lòng đăng nhập lại.');
+      } else {
+        _setError('Không thể tải thông tin hồ sơ. Vui lòng thử lại sau.');
+      }
       rethrow;
     } finally {
       _setLoading(false);

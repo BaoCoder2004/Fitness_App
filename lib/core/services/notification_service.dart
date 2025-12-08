@@ -452,6 +452,9 @@ class NotificationService {
       final minutesUntil = scheduledTime.difference(now).inMinutes;
       debugPrint(
           '[NotificationService] ⏰ Notification will arrive in $minutesUntil minutes');
+      debugPrint('[NotificationService] ⏰ Scheduled date: ${scheduledTime.year}-${scheduledTime.month}-${scheduledTime.day} ${scheduledTime.hour}:${scheduledTime.minute}');
+    } else {
+      debugPrint('[NotificationService] ⚠️ Scheduled time is null!');
     }
 
     try {
@@ -610,6 +613,10 @@ class NotificationService {
             '[NotificationService] Notification time: ${notificationTime.hour}:${notificationTime.minute} (1 minute before)');
         debugPrint(
             '[NotificationService] ⏰ Scheduling for ${duration.inMinutes} minutes from now (using zonedSchedule with matchDateTimeComponents.time)');
+        debugPrint(
+            '[NotificationService] 📅 Notification will repeat daily at ${notificationTime.hour}:${notificationTime.minute}');
+        debugPrint(
+            '[NotificationService] 📅 First notification: ${notificationTime.year}-${notificationTime.month}-${notificationTime.day} ${notificationTime.hour}:${notificationTime.minute}');
         final fallbackUsed = await _runWithExactFallback((mode) async {
           await _plugin.zonedSchedule(
             notificationId,

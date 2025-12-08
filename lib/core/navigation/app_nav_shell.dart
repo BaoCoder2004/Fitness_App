@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -30,6 +32,7 @@ class AppNavShell extends StatefulWidget {
 
 class _AppNavShellState extends State<AppNavShell> {
   int _currentIndex = 0;
+  StreamSubscription? _profileSubscription;
 
   final List<Widget> _pages = const [
     DashboardPage(),
@@ -49,6 +52,66 @@ class _AppNavShellState extends State<AppNavShell> {
         syncService.syncPendingData();
       }
     });
+    
+    // Listen vào thay đổi của user profile để phát hiện khi admin khóa tài khoản
+    _startProfileMonitoring();
+  }
+
+  void _startProfileMonitoring() {
+    final user = widget.authRepository.currentUser;
+    if (user == null) return;
+
+    _profileSubscription?.cancel();
+    _profileSubscription = widget.userProfileRepository
+        .watchProfile(user.uid)
+        .listen((profile) {
+      if (profile == null) return;
+
+      // Kiểm tra nếu user bị khóa hoặc role thay đổi thành admin
+      if (profile.status == 'blocked') {
+        // User bị khóa - tự động sign out
+        _handleBlockedAccount();
+      } else if (profile.role == 'admin') {
+        // User được nâng lên admin - tự động sign out
+        _handleAdminAccount();
+      }
+    });
+  }
+
+  void _handleBlockedAccount() {
+    // Hiển thị thông báo trước khi sign out
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.'),
+          duration: Duration(seconds: 5),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    // Sign out sau khi hiển thị thông báo
+    widget.authRepository.signOut();
+  }
+
+  void _handleAdminAccount() {
+    // Hiển thị thông báo trước khi sign out
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tài khoản admin không thể đăng nhập vào ứng dụng mobile. Vui lòng sử dụng admin panel.'),
+          duration: Duration(seconds: 5),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    // Sign out sau khi hiển thị thông báo
+    widget.authRepository.signOut();
+  }
+
+  @override
+  void dispose() {
+    _profileSubscription?.cancel();
+    super.dispose();
   }
 
   @override
