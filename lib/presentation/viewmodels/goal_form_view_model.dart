@@ -86,11 +86,23 @@ class GoalFormViewModel extends ChangeNotifier {
       _setError(null);
       
       // Tạo goal (async, không block UI)
-      unawaited(_goalRepository.createGoal(goal).then((_) async {
+      unawaited(_goalRepository.createGoal(goal).then((createdGoal) async {
         // Setup reminder sau khi tạo goal thành công
-        // Sử dụng goal object với id đã được set
-        await _goalService.setupGoalReminder(goal);
-        debugPrint('[GoalFormViewModel] ✅ Goal created and reminder setup for goal ${goal.id}');
+        // Sử dụng goal object với id đã được set từ Firestore
+        try {
+          debugPrint('[GoalFormViewModel] 📅 Setting up reminder for goal ${goal.id}');
+          debugPrint('[GoalFormViewModel] Reminder enabled: ${goal.reminderEnabled}');
+          debugPrint('[GoalFormViewModel] Reminder time: ${goal.reminderHour}:${goal.reminderMinute}');
+          debugPrint('[GoalFormViewModel] TimeFrame: ${goal.timeFrame?.displayName ?? "none"}');
+          debugPrint('[GoalFormViewModel] Deadline: ${goal.deadline}');
+          
+          await _goalService.setupGoalReminder(goal);
+          debugPrint('[GoalFormViewModel] ✅ Goal created and reminder setup for goal ${goal.id}');
+        } catch (e, stackTrace) {
+          debugPrint('[GoalFormViewModel] ❌ Error setting up reminder: $e');
+          debugPrint('[GoalFormViewModel] Stack trace: $stackTrace');
+          // Không set error vì goal đã được tạo thành công, chỉ reminder bị lỗi
+        }
       }).catchError((e) {
         debugPrint('Deferred goal creation failed: $e');
         if (e.toString().contains('network') || e.toString().contains('Network') || e.toString().contains('permission-denied')) {

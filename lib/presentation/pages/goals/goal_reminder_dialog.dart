@@ -74,6 +74,7 @@ class _GoalReminderDialogState extends State<GoalReminderDialog> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(

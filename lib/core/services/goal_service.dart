@@ -148,6 +148,7 @@ class GoalService {
           (session) => session.distanceKm ?? 0,
           goal.activityTypeFilter,
           goal.timeFrame,
+          goal.deadline,
         );
       case GoalType.calories:
         return _sumActivities(
@@ -156,6 +157,7 @@ class GoalService {
           (session) => session.calories,
           goal.activityTypeFilter,
           goal.timeFrame,
+          goal.deadline,
         );
       case GoalType.duration:
         return _sumActivities(
@@ -164,6 +166,7 @@ class GoalService {
           (session) => session.durationSeconds / 60.0,
           goal.activityTypeFilter,
           goal.timeFrame,
+          goal.deadline,
         );
       case GoalType.weight:
         return _calculateWeightDelta(goal);
@@ -176,9 +179,10 @@ class GoalService {
     double Function(ActivitySession session) selector,
     String? activityTypeFilter,
     GoalTimeFrame? timeFrame,
+    DateTime? deadline,
   ) async {
     // Tính toán khoảng thời gian dựa trên timeFrame
-    final (start, end) = _calculateTimeRange(startDate, timeFrame);
+    final (start, end) = _calculateTimeRange(startDate, timeFrame, deadline);
     
     final activities = await _activityRepository.getActivitiesInRange(
       userId: userId,
@@ -200,17 +204,39 @@ class GoalService {
   (DateTime start, DateTime end) _calculateTimeRange(
     DateTime startDate,
     GoalTimeFrame? timeFrame,
+    DateTime? deadline,
   ) {
     final now = DateTime.now();
+    
+    // Nếu có deadline và đã quá hạn, chỉ tính đến deadline
+    DateTime endTime = now;
+    if (deadline != null) {
+      // Với daily goals, deadline là 23:59:59 cùng ngày
+      // Với các goals khác, deadline là thời điểm cụ thể
+      final deadlineEnd = timeFrame == GoalTimeFrame.daily
+          ? deadline
+          : _buildDeadlineTime(deadline);
+      
+      // Nếu đã quá deadline, chỉ tính đến deadline
+      if (now.isAfter(deadlineEnd)) {
+        endTime = deadlineEnd;
+      }
+    }
+    
     if (timeFrame == null) {
-      return (startDate, now);
+      return (startDate, endTime);
     }
 
     DateTime start;
     switch (timeFrame) {
       case GoalTimeFrame.daily:
-        // Tính từ đầu ngày hôm nay
-        start = DateTime(now.year, now.month, now.day);
+        // Tính từ đầu ngày hôm nay (hoặc deadline nếu đã quá hạn)
+        if (deadline != null && now.isAfter(deadline)) {
+          // Nếu đã quá deadline, tính từ đầu ngày deadline
+          start = DateTime(deadline.year, deadline.month, deadline.day);
+        } else {
+          start = DateTime(now.year, now.month, now.day);
+        }
         break;
       case GoalTimeFrame.weekly:
         // Tính từ đầu tuần (Thứ 2)
@@ -231,7 +257,11 @@ class GoalService {
     if (start.isBefore(startDate)) {
       start = startDate;
     }
-    return (start, now);
+    // Đảm bảo start không muộn hơn endTime
+    if (start.isAfter(endTime)) {
+      start = endTime;
+    }
+    return (start, endTime);
   }
 
   Future<double> _calculateWeightDelta(Goal goal) async {
@@ -309,6 +339,7 @@ class GoalService {
         : _buildDeadlineTime(goal.deadline!);
     
     if (now.isAfter(checkTime)) {
+      // Mục tiêu đã quá hạn - chỉ thông báo 1 lần
       final notified = await _isDeadlineWarned(goal.id);
       if (!notified) {
         await notificationService.showGoalDeadlineWarning(
@@ -316,8 +347,11 @@ class GoalService {
           goalName: _getGoalDisplayName(goal),
         );
         await _markDeadlineWarned(goal.id);
+        // Cancel reminder khi đã quá hạn
+        await notificationService.cancelGoalDailyReminder(goal.id);
       }
     } else {
+      // Chưa quá hạn - clear flag và schedule notification cho deadline
       await _clearDeadlineNotified(goal.id);
       // Schedule notification "đã quá hạn" cho tất cả goals (kể cả daily) vào 23:59:59 ngày deadline
       await notificationService.scheduleGoalDeadlineOverdueNotification(
@@ -404,10 +438,26 @@ class GoalService {
       debugPrint('[GoalService] NotificationService is null, cannot setup reminder');
       return;
     }
+    
+    // Không setup reminder cho goals đã completed hoặc đã quá hạn
     if (goal.status == GoalStatus.completed) {
       await notificationService.cancelGoalDailyReminder(goal.id);
       return;
     }
+    
+    // Kiểm tra xem goal đã quá hạn chưa
+    if (goal.deadline != null) {
+      final now = DateTime.now();
+      final checkTime = goal.timeFrame == GoalTimeFrame.daily
+          ? goal.deadline!
+          : _buildDeadlineTime(goal.deadline!);
+      if (now.isAfter(checkTime)) {
+        debugPrint('[GoalService] Goal ${goal.id} has expired, cancelling reminder');
+        await notificationService.cancelGoalDailyReminder(goal.id);
+        return;
+      }
+    }
+    
     if (goal.reminderEnabled &&
         goal.reminderHour != null &&
         goal.reminderMinute != null) {
@@ -452,17 +502,11 @@ class GoalService {
         }
       }
       
-      // Với weekly/monthly/yearly: kiểm tra xem goal đã hết hạn chưa
-      if (goal.timeFrame != GoalTimeFrame.daily && goal.deadline != null) {
-        final now = DateTime.now();
-        if (now.isAfter(goal.deadline!)) {
-          debugPrint('[GoalService] Goal ${goal.id} has expired, cancelling reminder');
-          await notificationService.cancelGoalDailyReminder(goal.id);
-          return;
-        }
-      }
+      // Cancel reminder cũ trước khi setup lại để tránh duplicate
+      await notificationService.cancelGoalDailyReminder(goal.id);
+      debugPrint('[GoalService] Cancelled old reminder for goal ${goal.id} before setting up new one');
       
-      debugPrint('[GoalService] Setting up reminder for goal ${goal.id} at ${goal.reminderHour}:${goal.reminderMinute}');
+      debugPrint('[GoalService] Setting up reminder for goal ${goal.id} (${goal.timeFrame?.displayName ?? "no timeframe"}) at ${goal.reminderHour}:${goal.reminderMinute}');
       final success = await notificationService.scheduleGoalDailyReminder(
         goalId: goal.id,
         goalName: _getGoalDisplayName(goal),
@@ -472,7 +516,9 @@ class GoalService {
         deadline: goal.deadline,
       );
       if (!success) {
-        debugPrint('[GoalService] Failed to schedule reminder for goal ${goal.id}');
+        debugPrint('[GoalService] ❌ Failed to schedule reminder for goal ${goal.id}');
+      } else {
+        debugPrint('[GoalService] ✅ Reminder scheduled successfully for goal ${goal.id}');
       }
     } else {
       debugPrint('[GoalService] Cancelling reminder for goal ${goal.id} (disabled or no time set)');
@@ -505,6 +551,40 @@ class GoalService {
 
   Future<void> setupGoalDailyReminder(Goal goal, bool shouldComplete) async {
     await setupGoalReminder(goal);
+  }
+
+  /// Test reminder cho goal bằng cách schedule notification cho vài phút sau
+  /// minutesFromNow: số phút từ bây giờ để schedule notification test (mặc định: 2 phút)
+  Future<bool> testGoalReminder({
+    required Goal goal,
+    int minutesFromNow = 2,
+  }) async {
+    final notificationService = _notificationService;
+    if (notificationService == null) {
+      debugPrint('[GoalService] NotificationService is null, cannot test reminder');
+      return false;
+    }
+
+    if (!goal.reminderEnabled ||
+        goal.reminderHour == null ||
+        goal.reminderMinute == null) {
+      debugPrint('[GoalService] Goal ${goal.id} does not have reminder enabled');
+      return false;
+    }
+
+    debugPrint('[GoalService] 🧪 Testing reminder for goal ${goal.id}');
+    debugPrint('[GoalService] Goal type: ${goal.timeFrame?.displayName ?? "no timeframe"}');
+    debugPrint('[GoalService] Reminder time: ${goal.reminderHour}:${goal.reminderMinute}');
+    
+    return await notificationService.testGoalReminder(
+      goalId: goal.id,
+      goalName: _getGoalDisplayName(goal),
+      hour: goal.reminderHour!,
+      minute: goal.reminderMinute!,
+      isDaily: goal.timeFrame == GoalTimeFrame.daily,
+      deadline: goal.deadline,
+      minutesFromNow: minutesFromNow,
+    );
   }
 }
 
