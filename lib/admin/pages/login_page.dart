@@ -144,6 +144,9 @@ class _LoginPageState extends State<LoginPage> {
                             authProvider.isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: const Color(0xFF6366F1), // Indigo màu đậm, dễ nhìn
+                          foregroundColor: Colors.white,
+                          elevation: 2,
                         ),
                         child: authProvider.isLoading
                             ? const SizedBox(
@@ -151,9 +154,16 @@ class _LoginPageState extends State<LoginPage> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
+                                  color: Colors.white,
                                 ),
                               )
-                            : const Text('Đăng nhập'),
+                            : const Text(
+                                'Đăng nhập',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       );
                     },
                   ),

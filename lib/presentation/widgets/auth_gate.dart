@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/navigation/app_nav_shell.dart';
+import '../../core/services/unlock_request_service.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../../domain/repositories/weight_history_repository.dart';
 import '../pages/auth/email_verification_page.dart';
 import '../pages/auth/login_page.dart';
+import 'unlock_request_dialog.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -83,20 +85,24 @@ class AuthGate extends StatelessWidget {
                   return const LoginPage();
                 }
                 if (profile?.status == 'blocked') {
-                  // User bị khóa không được vào mobile app
-                  // Hiển thị thông báo trước khi sign out
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                  // User bị khóa - hiển thị dialog liên hệ trước khi sign out
+                  WidgetsBinding.instance.addPostFrameCallback((_) async {
+                    if (!context.mounted) return;
+                    final unlockService = context.read<UnlockRequestService>();
+                    await showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (context) => UnlockRequestDialog(
+                        userId: refreshedUser.uid,
+                        unlockRequestService: unlockService,
+                        defaultEmail: refreshedUser.email,
+                        defaultName: profile?.name ?? '',
+                      ),
+                    );
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.'),
-                          duration: Duration(seconds: 5),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      await authRepository.signOut();
                     }
                   });
-                  Future.microtask(() => authRepository.signOut());
                   return const LoginPage();
                 }
                 

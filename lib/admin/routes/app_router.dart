@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/login_page.dart';
 import '../pages/profile_page.dart';
+import '../pages/unlock_requests_page.dart';
 import '../pages/users_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -51,6 +52,10 @@ class AppRouter {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/unlock-requests',
+        builder: (context, state) => const UnlockRequestsPage(),
       ),
     ],
   );

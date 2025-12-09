@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../firebase_options.dart';
+import '../data/repositories/firestore_unlock_request_repository.dart';
+import '../domain/repositories/unlock_request_repository.dart';
 import 'providers/auth_provider.dart';
 import 'routes/app_router.dart';
 
@@ -22,6 +24,9 @@ class AdminApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        Provider<UnlockRequestRepository>(
+          create: (_) => FirestoreUnlockRequestRepository(),
+        ),
       ],
       child: MaterialApp.router(
         title: 'Fitness App Admin',

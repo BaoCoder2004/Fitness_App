@@ -10,21 +10,21 @@ allprojects {
 
 subprojects {
     tasks.withType<JavaCompile>().configureEach {
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+        sourceCompatibility = "21"
+        targetCompatibility = "21"
         options.compilerArgs.add("-Xlint:-options")
     }
     plugins.withId("org.jetbrains.kotlin.android") {
         configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
             compilerOptions {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
             }
         }
     }
     plugins.withId("org.jetbrains.kotlin.jvm") {
         configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
             compilerOptions {
-                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
             }
         }
     }

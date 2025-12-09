@@ -7,6 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/services/local_storage_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/sync_service.dart';
+import 'core/services/unlock_request_service.dart';
 import 'data/repositories/firebase_auth_repository.dart';
 import 'data/repositories/firestore_activity_repository.dart';
 import 'data/repositories/firestore_goal_repository.dart';
@@ -16,6 +17,7 @@ import 'data/repositories/firestore_user_profile_repository.dart';
 import 'data/repositories/firestore_weight_history_repository.dart';
 import 'data/repositories/firestore_chat_repository.dart';
 import 'data/repositories/firestore_ai_insight_repository.dart';
+import 'data/repositories/firestore_unlock_request_repository.dart';
 import 'core/services/gemini_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
@@ -32,6 +34,7 @@ import 'domain/repositories/user_profile_repository.dart';
 import 'domain/repositories/weight_history_repository.dart';
 import 'domain/repositories/chat_repository.dart';
 import 'domain/repositories/ai_insight_repository.dart';
+import 'domain/repositories/unlock_request_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -143,6 +146,14 @@ class FitnessApp extends StatelessWidget {
         ),
         Provider<AIInsightRepository>(
           create: (_) => FirestoreAIInsightRepository(),
+        ),
+        Provider<UnlockRequestRepository>(
+          create: (_) => FirestoreUnlockRequestRepository(),
+        ),
+        Provider<UnlockRequestService>(
+          create: (context) => UnlockRequestService(
+            unlockRequestRepository: context.read<UnlockRequestRepository>(),
+          ),
         ),
         Provider<GeminiService>(
           create: (_) => GeminiService(),

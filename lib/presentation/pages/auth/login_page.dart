@@ -2,10 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../viewmodels/auth_view_model.dart';
+import '../../widgets/unlock_request_dialog.dart';
 import 'email_verification_page.dart';
 import 'register_page.dart';
+import '../../../core/services/unlock_request_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -47,15 +51,60 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
+    // Cho phép hiển thị lại dialog mỗi lần thử đăng nhập
+    _lastDisplayedError = null;
+    
     final messenger = ScaffoldMessenger.of(context);
     final viewModel = context.read<AuthViewModel>();
+    final email = _emailController.text.trim();
+    
     try {
       await viewModel.signIn(
-        _emailController.text.trim(),
+        email,
         _passwordController.text,
       );
-    } catch (_) {
+    } catch (e) {
       final message = viewModel.errorMessage;
+      bool isBlocked = message?.toLowerCase().contains('khóa') == true ||
+          e.toString().toLowerCase().contains('blocked') ||
+          (e is FirebaseAuthException && e.code == 'user-disabled');
+
+      // Fallback: nếu chưa xác định, kiểm tra profile theo email
+      if (!isBlocked && email.isNotEmpty) {
+        try {
+          final users = await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+          if (users.docs.isNotEmpty) {
+            final data = users.docs.first.data();
+            if ((data['status'] ?? '') == 'blocked') {
+              isBlocked = true;
+            }
+          }
+        } catch (_) {
+          // bỏ qua lỗi check
+        }
+      }
+
+      if (isBlocked && mounted) {
+        final unlockService = context.read<UnlockRequestService>();
+        await showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => UnlockRequestDialog(
+            userId: 'temp_${email.hashCode}',
+            unlockRequestService: unlockService,
+            defaultEmail: email,
+          ),
+        );
+        viewModel.clearError();
+        _lastDisplayedError = null;
+        return;
+      }
+
+      // Lỗi khác
       if (message != null && mounted && message != _lastDisplayedError) {
         messenger.showSnackBar(
           SnackBar(
@@ -65,7 +114,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
         _lastDisplayedError = message;
-        // Clear error sau khi hiển thị để tránh hiển thị lại
         viewModel.clearError();
       }
     }
@@ -95,22 +143,40 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<AuthViewModel>();
     final isLoading = viewModel.isLoading;
     final errorMessage = viewModel.errorMessage;
     
-    // Hiển thị error message nếu có và chưa được hiển thị trước đó
-    // (Trường hợp này dành cho khi user bị sign out từ AuthGate/AppNavShell)
-    if (errorMessage != null && 
-        errorMessage != _lastDisplayedError && 
-        mounted && 
+    // Hiển thị lại dialog nếu error từ lần trước là blocked
+    if (errorMessage != null &&
+        errorMessage != _lastDisplayedError &&
+        mounted &&
         !isLoading) {
+      final lower = errorMessage.toLowerCase();
+      final isBlocked = lower.contains('khóa') || lower.contains('blocked');
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && 
-            viewModel.errorMessage == errorMessage && 
-            errorMessage != _lastDisplayedError) {
+        if (!mounted ||
+            viewModel.errorMessage != errorMessage ||
+            errorMessage == _lastDisplayedError) return;
+
+        if (isBlocked) {
+          final unlockService = context.read<UnlockRequestService>();
+          final email = _emailController.text.trim();
+          showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (context) => UnlockRequestDialog(
+              userId: 'temp_${email.hashCode}',
+              unlockRequestService: unlockService,
+              defaultEmail: email,
+            ),
+          );
+          _lastDisplayedError = errorMessage;
+          viewModel.clearError();
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errorMessage),
@@ -119,7 +185,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
           _lastDisplayedError = errorMessage;
-          // Clear error sau khi hiển thị
           viewModel.clearError();
         }
       });
@@ -209,14 +274,55 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: isLoading || _isGoogleLoading
                       ? null
                       : () async {
+                          // Cho phép hiển thị lại dialog mỗi lần thử đăng nhập
+                          _lastDisplayedError = null;
                           final messenger = ScaffoldMessenger.of(context);
                           final authViewModel = context.read<AuthViewModel>();
                           setState(() => _isGoogleLoading = true);
                           try {
                             await authViewModel.signInWithGoogle();
-                          } catch (_) {
+                          } catch (e) {
                             final message = authViewModel.errorMessage;
-                            if (message != null && mounted && message != _lastDisplayedError) {
+                            bool isBlocked = message?.toLowerCase().contains('khóa') == true ||
+                                e.toString().toLowerCase().contains('blocked') ||
+                                (e is FirebaseAuthException && e.code == 'user-disabled');
+
+                            // Fallback: nếu chưa xác định, thử lấy email hiện tại check Firestore
+                            if (!isBlocked) {
+                              final email = authViewModel.currentUser?.email ?? _emailController.text.trim();
+                              if (email.isNotEmpty) {
+                                try {
+                                  final users = await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .where('email', isEqualTo: email)
+                                      .limit(1)
+                                      .get();
+                                  if (users.docs.isNotEmpty) {
+                                    final data = users.docs.first.data();
+                                    if ((data['status'] ?? '') == 'blocked') {
+                                      isBlocked = true;
+                                    }
+                                  }
+                                } catch (_) {
+                                  // ignore
+                                }
+                              }
+                            }
+
+                            if (isBlocked && mounted) {
+                              final unlockService = context.read<UnlockRequestService>();
+                              await showDialog(
+                                context: context,
+                                barrierDismissible: true,
+                                builder: (context) => UnlockRequestDialog(
+                                  userId: 'temp_google_${DateTime.now().millisecondsSinceEpoch}',
+                                  unlockRequestService: unlockService,
+                                  defaultEmail: authViewModel.currentUser?.email ?? '',
+                                ),
+                              );
+                              authViewModel.clearError();
+                              _lastDisplayedError = null;
+                            } else if (message != null && mounted && message != _lastDisplayedError) {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(message),
@@ -225,7 +331,6 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               );
                               _lastDisplayedError = message;
-                              // Clear error sau khi hiển thị để tránh hiển thị lại
                               authViewModel.clearError();
                             }
                           } finally {

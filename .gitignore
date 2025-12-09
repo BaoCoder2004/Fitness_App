@@ -49,3 +49,13 @@ app.*.map.json
 .env
 .env.local
 .env.*.local
+
+# Node.js dependencies
+node_modules/
+**/node_modules/
+
+# Firebase functions: ignore all except key source files
+functions/**
+!functions/index.js
+!functions/package.json
+!functions/package-lock.json

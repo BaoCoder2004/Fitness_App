@@ -30,6 +30,17 @@ service cloud.firestore {
       }
     }
     
+    // Unlock requests collection
+    match /unlock_requests/{requestId} {
+      // Cho phép bất kỳ ai tạo yêu cầu mở khóa với dữ liệu bắt buộc
+      allow create: if request.resource.data.keys().hasAll(['userEmail', 'userName', 'createdAt']) &&
+                       request.resource.data.status == 'pending';
+      // Admin (authenticated) có thể đọc/cập nhật
+      allow read, update: if isAuthenticated();
+      // Cho phép xóa (admin, check auth ở app)
+      allow delete: if isAuthenticated();
+    }
+    
     // Activities collection (if exists at root level)
     match /activities/{activityId} {
       allow read, write: if isAuthenticated();
