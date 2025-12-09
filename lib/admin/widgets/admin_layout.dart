@@ -225,8 +225,8 @@ class _SidebarContent extends StatelessWidget {
         crossAxisAlignment:
             isRail ? CrossAxisAlignment.center : CrossAxisAlignment.start,
           children: [
-            navItem(icon: Icons.dashboard_outlined, label: 'Dashboard', route: '/dashboard'),
-            navItem(icon: Icons.people_alt_outlined, label: 'Quản lý User', route: '/users'),
+            navItem(icon: Icons.dashboard_outlined, label: 'Tổng quan', route: '/dashboard'),
+            navItem(icon: Icons.people_alt_outlined, label: 'Quản lý người dùng', route: '/users'),
             navItem(icon: Icons.lock_open_outlined, label: 'Yêu cầu mở khóa', route: '/unlock-requests'),
             navItem(icon: Icons.person_outline, label: 'Hồ sơ', route: '/profile'),
             const Spacer(),

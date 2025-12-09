@@ -136,7 +136,7 @@ class _UnlockRequestDialogState extends State<UnlockRequestDialog> {
               const SizedBox(height: 12),
               _buildField(
                 controller: _reasonController,
-                label: 'Lý do/Ghi chú (tuỳ chọn)',
+                label: 'Ghi chú (tuỳ chọn)',
                 maxLines: 2,
               ),
               const SizedBox(height: 16),

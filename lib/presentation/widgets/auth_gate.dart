@@ -88,6 +88,16 @@ class AuthGate extends StatelessWidget {
                   // User bị khóa - hiển thị dialog liên hệ trước khi sign out
                   WidgetsBinding.instance.addPostFrameCallback((_) async {
                     if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(
+                          'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ admin để mở khóa.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        duration: const Duration(seconds: 4),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
                     final unlockService = context.read<UnlockRequestService>();
                     await showDialog(
                       context: context,

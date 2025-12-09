@@ -35,6 +35,20 @@ class _LoginPageState extends State<LoginPage> {
     _lastDisplayedError = null;
     super.dispose();
   }
+
+  void _showBlockedNotice() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ admin để mở khóa.',
+          style: TextStyle(color: Colors.white),
+        ),
+        duration: const Duration(seconds: 4),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
   
   @override
   void initState() {
@@ -89,6 +103,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (isBlocked && mounted) {
+        _showBlockedNotice();
         final unlockService = context.read<UnlockRequestService>();
         await showDialog(
           context: context,
@@ -165,6 +180,7 @@ class _LoginPageState extends State<LoginPage> {
         if (isBlocked) {
           final unlockService = context.read<UnlockRequestService>();
           final email = _emailController.text.trim();
+          _showBlockedNotice();
           showDialog(
             context: context,
             barrierDismissible: true,
@@ -311,6 +327,7 @@ class _LoginPageState extends State<LoginPage> {
 
                             if (isBlocked && mounted) {
                               final unlockService = context.read<UnlockRequestService>();
+                              _showBlockedNotice();
                               await showDialog(
                                 context: context,
                                 barrierDismissible: true,

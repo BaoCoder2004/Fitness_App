@@ -145,268 +145,271 @@ class _UsersPageState extends State<UsersPage> {
         );
 
     return AdminLayout(
-      title: 'Quản lý User',
+      title: 'Quản lý người dùng',
       currentRoute: '/users',
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Quản lý User',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
-                    ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 10, 24, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: const Color(0xFFF6F8FB),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 220, maxWidth: 420),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Quản lý người dùng',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Theo dõi tài khoản, vai trò và trạng thái của người dùng.',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 260, maxWidth: 420),
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Tìm kiếm theo tên hoặc email',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchQuery = '';
-                                });
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.white,
+                      hintText: 'Tìm kiếm email hoặc họ tên...',
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value.toLowerCase();
-                      });
-                    },
+                    onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
                   ),
                 ),
-                const SizedBox(width: 12),
-                _FilterChipDropdown(
-                  label: 'Trạng thái',
-                  value: _filterStatus,
-                  items: const [
-                    ('all', 'Tất cả trạng thái'),
-                    ('active', 'Hoạt động'),
-                    ('blocked', 'Bị khóa'),
-                  ],
-                  onChanged: (v) => setState(() => _filterStatus = v),
+                SizedBox(
+                  width: 190,
+                  child: _FilterChipDropdown(
+                    label: 'Trạng thái',
+                    value: _filterStatus,
+                    items: const [
+                      ('all', 'Tất cả trạng thái'),
+                      ('active', 'Hoạt động'),
+                      ('blocked', 'Bị khóa'),
+                    ],
+                    onChanged: (v) => setState(() => _filterStatus = v),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _FilterChipDropdown(
-                  label: 'Role',
-                  value: _filterRole,
-                  items: const [
-                    ('all', 'Tất cả role'),
-                    ('user', 'User'),
-                    ('admin', 'Admin'),
-                  ],
-                  onChanged: (v) => setState(() => _filterRole = v),
+                SizedBox(
+                  width: 190,
+                  child: _FilterChipDropdown(
+                    label: 'Vai trò',
+                    value: _filterRole,
+                    items: const [
+                      ('all', 'Tất cả vai trò'),
+                      ('user', 'Người dùng'),
+                      ('admin', 'Admin'),
+                    ],
+                    onChanged: (v) => setState(() => _filterRole = v),
+                  ),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            const SizedBox(height: 18),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Lỗi: ${snapshot.error}'),
-                  );
-                }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text('Lỗi: ${snapshot.error}'),
+                    );
+                  }
 
-                final users = snapshot.data?.docs ?? [];
-                final filteredUsers = users.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final role = data['role'] as String? ?? 'user';
-                  final email = (data['email'] as String? ?? '').toLowerCase();
-                  final name = (data['name'] as String? ?? '').toLowerCase();
-                  // Hiển thị cả admin và chính mình; chỉ lọc theo search/filter
-                  if (_filterRole != 'all' && role != _filterRole) return false;
-                  final status = (data['status'] as String? ?? 'active');
-                  if (_filterStatus != 'all' && status != _filterStatus) return false;
-                  if (_searchQuery.isEmpty) return true;
-                  return email.contains(_searchQuery) || name.contains(_searchQuery);
-                }).toList();
+                  final users = snapshot.data?.docs ?? [];
+                  final filteredUsers = users.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final role = data['role'] as String? ?? 'user';
+                    final email = (data['email'] as String? ?? '').toLowerCase();
+                    final name = (data['name'] as String? ?? '').toLowerCase();
+                    if (_filterRole != 'all' && role != _filterRole) return false;
+                    final status = (data['status'] as String? ?? 'active');
+                    if (_filterStatus != 'all' && status != _filterStatus) return false;
+                    if (_searchQuery.isEmpty) return true;
+                    return email.contains(_searchQuery) || name.contains(_searchQuery);
+                  }).toList();
 
-                if (filteredUsers.isEmpty) {
-                  return Center(
-                    child: Text(
-                      _searchQuery.isEmpty
-                          ? 'Chưa có user nào'
-                          : 'Không tìm thấy user nào',
-                    ),
-                  );
-                }
+                  if (filteredUsers.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'Chưa có người dùng nào.',
+                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                      ),
+                    );
+                  }
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Theme(
-                        data: Theme.of(context).copyWith(
-                          dataTableTheme: DataTableThemeData(
-                            headingRowColor: MaterialStateProperty.all(
-                              Colors.white,
-                            ),
-                            headingTextStyle: headerStyle,
-                            dataRowColor: MaterialStateProperty.resolveWith(
-                              (states) => states.contains(MaterialState.hovered)
-                                  ? Colors.blue.withOpacity(0.03)
-                                  : Colors.white,
-                            ),
-                            dividerThickness: 0.4,
-                            columnSpacing: 22,
-                          ),
+                  return Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
                         ),
-                        child: DataTable(
-                          border: TableBorder(
-                            horizontalInside: BorderSide(
-                              color: Colors.grey.withOpacity(0.2),
-                              width: 0.4,
-                            ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: DataTableTheme(
+                        data: DataTableThemeData(
+                          headingRowColor: MaterialStateProperty.all(const Color(0xFFF4F6FA)),
+                          dataRowColor: MaterialStateProperty.resolveWith<Color?>(
+                            (states) => states.contains(MaterialState.hovered)
+                                ? const Color(0xFFEEF2F7)
+                                : null,
                           ),
-                          columns: const [
-                            DataColumn(label: Text('Email')),
-                            DataColumn(label: Text('Tên')),
-                            DataColumn(label: Text('Role')),
-                            DataColumn(label: Text('Trạng thái')),
-                            DataColumn(label: Text('Ngày tạo')),
-                            DataColumn(label: Text('Thao tác')),
-                          ],
-                          rows: filteredUsers.map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            final email = data['email'] as String? ?? '';
-                            final name = data['name'] as String? ?? 'Chưa có tên';
-                            final role = data['role'] as String? ?? 'user';
-                            final status = data['status'] as String? ?? 'active';
-                            final createdAt =
-                                (data['createdAt'] as Timestamp?)?.toDate();
-                            final createdAtText = createdAt != null
-                                ? '${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}'
-                                : '—';
-
-                            Color roleColor = role == 'admin'
-                                ? const Color(0xFFFFE8C7)
-                                : const Color(0xFFE5EDFF);
-                            Color statusColor = status == 'active'
-                                ? const Color(0xFFE7F8EF)
-                                : const Color(0xFFFDEBEC);
-
-                            final isCurrent = currentUser != null && doc.id == currentUser.uid;
-                            final isAdmin = role == 'admin';
-
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(email)),
-                                DataCell(Text(name)),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: roleColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      role == 'admin' ? 'Admin' : 'User',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
+                          headingTextStyle: headerStyle,
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minWidth: constraints.maxWidth,
                                 ),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: statusColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      status == 'active' ? 'Hoạt động' : 'Bị khóa',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ),
-                                DataCell(Text(createdAtText)),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      TextButton(
-                                        onPressed: isAdmin
-                                            ? null
-                                            : () => _updateStatus(
-                                                context, doc.id, status),
-                                        child: Text(
-                                          status == 'active' ? 'Khóa' : 'Mở khóa',
-                                          style: TextStyle(
-                                            color: isAdmin
-                                                ? Colors.grey
-                                                : null,
-                                          ),
-                                        ),
-                                      ),
-                                      TextButton(
-                                        onPressed: isCurrent
-                                            ? null
-                                            : () =>
-                                                _updateRole(context, doc.id, role),
-                                        child: Text(
-                                          role == 'admin'
-                                              ? 'Thu hồi admin'
-                                              : 'Cấp admin',
-                                          style: TextStyle(
-                                            color: isCurrent
-                                                ? Colors.grey
-                                                : null,
-                                          ),
-                                        ),
-                                      ),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.vertical,
+                                  child: DataTable(
+                                    headingRowHeight: 48,
+                                    dataRowHeight: 60,
+                                    columnSpacing: 28,
+                                    horizontalMargin: 16,
+                                    columns: const [
+                                      DataColumn(label: Text('Email')),
+                                      DataColumn(label: Text('Họ tên')),
+                                      DataColumn(label: Text('Vai trò')),
+                                      DataColumn(label: Text('Trạng thái')),
+                                      DataColumn(label: Text('Ngày tạo')),
+                                      DataColumn(label: Text('Thao tác')),
                                     ],
+                                    rows: filteredUsers.map((doc) {
+                                      final data = doc.data() as Map<String, dynamic>;
+                                      final email = data['email'] as String? ?? '';
+                                      final name = data['name'] as String? ?? 'Chưa có tên';
+                                      final role = data['role'] as String? ?? 'user';
+                                      final status = data['status'] as String? ?? 'active';
+                                      final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+                                      final createdAtText = createdAt != null
+                                          ? '${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year}'
+                                          : '—';
+
+                                      Color roleColor = role == 'admin'
+                                          ? const Color(0xFFFFE8C7)
+                                          : const Color(0xFFE5EDFF);
+                                      Color roleTextColor = role == 'admin'
+                                          ? const Color(0xFF92400E)
+                                          : const Color(0xFF1D4ED8);
+                                      Color statusColor = status == 'active'
+                                          ? const Color(0xFFE7F8EF)
+                                          : const Color(0xFFFDEBEC);
+                                      Color statusTextColor = status == 'active'
+                                          ? const Color(0xFF15803D)
+                                          : const Color(0xFFB42318);
+
+                                      final isCurrent = currentUser != null && doc.id == currentUser.uid;
+                                      final isAdmin = role == 'admin';
+
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(Text(email)),
+                                          DataCell(Text(name)),
+                                          DataCell(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: roleColor,
+                                                borderRadius: BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                role == 'admin' ? 'Admin' : 'Người dùng',
+                                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: roleTextColor),
+                                              ),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: statusColor,
+                                                borderRadius: BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                status == 'active' ? 'Hoạt động' : 'Bị khóa',
+                                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusTextColor),
+                                              ),
+                                            ),
+                                          ),
+                                          DataCell(Text(createdAtText)),
+                                          DataCell(
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                TextButton(
+                                                  onPressed: isAdmin ? null : () => _updateStatus(context, doc.id, status),
+                                                  child: Text(
+                                                    status == 'active' ? 'Khóa' : 'Mở khóa',
+                                                    style: TextStyle(color: isAdmin ? Colors.grey : const Color(0xFF111827)),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                TextButton(
+                                                  onPressed: isCurrent ? null : () => _updateRole(context, doc.id, role),
+                                                  child: Text(
+                                                    role == 'admin' ? 'Thu hồi admin' : 'Cấp admin',
+                                                    style: TextStyle(color: isCurrent ? Colors.grey : const Color(0xFF4F46E5)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
                                   ),
                                 ),
-                              ],
+                              ),
                             );
-                          }).toList(),
+                          },
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -447,7 +450,7 @@ class _FilterChipDropdown extends StatelessWidget {
           )
           .toList(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -464,9 +467,14 @@ class _FilterChipDropdown extends StatelessWidget {
           children: [
             const Icon(Icons.filter_list, size: 18, color: Colors.black54),
             const SizedBox(width: 8),
-            Text(
-              items.firstWhere((e) => e.$1 == value).$2,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            Expanded(
+              child: Text(
+                items.firstWhere((e) => e.$1 == value).$2,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
             ),
             const SizedBox(width: 6),
             const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.black54),
