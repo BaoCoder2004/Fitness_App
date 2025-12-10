@@ -600,8 +600,9 @@ class NotificationService {
         debugPrint(
             '[NotificationService] ✅ Daily reminder scheduled: today (at exact time) + recurring from tomorrow (at exact time)');
       } else {
-        // Với các goals khác hoặc daily goals schedule cho ngày mai: schedule đúng vào giờ đã đặt
-        // Đảm bảo giây và millisecond = 0 để tránh rounding issues
+        // Goals không phải daily:
+        // - Nếu chưa qua giờ hôm nay: schedule đúng giờ hôm nay và lặp hằng ngày.
+        // - Nếu đã qua giờ: gửi ngay (now + 1 phút) để không bỏ lỡ, sau đó lặp hằng ngày từ ngày mai.
         final notificationTime = tz.TZDateTime(
           tz.local,
           scheduledTime.year,
@@ -609,84 +610,50 @@ class NotificationService {
           scheduledTime.day,
           scheduledTime.hour,
           scheduledTime.minute,
-          0, // giây = 0
-          0, // millisecond = 0
+          0,
+          0,
         );
         final duration = notificationTime.difference(now);
-        debugPrint(
-            '[NotificationService] ⏰ Scheduling recurring notification at exact reminder time');
-        debugPrint(
-            '[NotificationService] Requested time: $hour:$minute');
-        debugPrint(
-            '[NotificationService] Scheduled time: ${scheduledTime.hour}:${scheduledTime.minute}:${scheduledTime.second}');
-        debugPrint(
-            '[NotificationService] Notification time (normalized): ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}');
-        debugPrint(
-            '[NotificationService] ⏰ Scheduling for ${duration.inMinutes} minutes from now (using zonedSchedule with matchDateTimeComponents.time)');
-        debugPrint(
-            '[NotificationService] 📅 Notification will repeat daily at ${notificationTime.hour}:${notificationTime.minute}');
-        debugPrint(
-            '[NotificationService] 📅 First notification: ${notificationTime.year}-${notificationTime.month}-${notificationTime.day} ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}');
-        
-        // Nếu thời gian đã qua hôm nay, schedule cho ngày mai
-        if (duration.inSeconds <= 0) {
-          debugPrint(
-              '[NotificationService] ⚠️ Reminder time has passed today, scheduling for tomorrow');
-          // Đảm bảo giây và millisecond = 0
-          final tomorrowTime = tz.TZDateTime(
-            tz.local,
-            notificationTime.year,
-            notificationTime.month,
-            notificationTime.day,
-            notificationTime.hour,
-            notificationTime.minute,
-            0, // giây = 0
-            0, // millisecond = 0
-          ).add(const Duration(days: 1));
-          final fallbackUsed = await _runWithExactFallback((mode) async {
-            await _plugin.zonedSchedule(
-              notificationId,
-              'Nhắc nhở mục tiêu',
-              'Đừng quên mục tiêu "$goalName" của bạn hôm nay!',
-              tomorrowTime,
-              NotificationDetails(
-                android: _buildAndroidDetails(
-                  channelId: 'goal_daily_reminder_channel',
-                  channelName: 'Nhắc nhở mục tiêu hàng ngày',
-                  channelDescription: 'Thông báo nhắc nhở về mục tiêu mỗi ngày',
-                ),
+        debugPrint('[NotificationService] ⏰ Scheduling recurring notification at exact reminder time');
+        debugPrint('[NotificationService] Requested time: $hour:$minute');
+        debugPrint('[NotificationService] Scheduled time: ${scheduledTime.hour}:${scheduledTime.minute}:${scheduledTime.second}');
+        debugPrint('[NotificationService] Notification time (normalized): ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}');
+        debugPrint('[NotificationService] ⏰ Scheduling for ${duration.inMinutes} minutes from now (using zonedSchedule with matchDateTimeComponents.time)');
+        debugPrint('[NotificationService] 📅 Notification will repeat daily at ${notificationTime.hour}:${notificationTime.minute}');
+        debugPrint('[NotificationService] 📅 First notification target: ${notificationTime.year}-${notificationTime.month}-${notificationTime.day} ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}');
+
+        final sendImmediate = duration.inSeconds <= 0;
+
+        if (sendImmediate) {
+          final immediateTime = now.add(const Duration(minutes: 1));
+          debugPrint('[NotificationService] ⚠️ Reminder time has passed today, sending immediate notification and scheduling recurring from tomorrow');
+          await _plugin.zonedSchedule(
+            notificationId,
+            'Nhắc nhở mục tiêu',
+            'Đừng quên mục tiêu "$goalName" của bạn hôm nay!',
+            immediateTime,
+            NotificationDetails(
+              android: _buildAndroidDetails(
+                channelId: 'goal_daily_reminder_channel',
+                channelName: 'Nhắc nhở mục tiêu hàng ngày',
+                channelDescription: 'Thông báo nhắc nhở về mục tiêu mỗi ngày',
               ),
-              androidScheduleMode: mode,
-              uiLocalNotificationDateInterpretation:
-                  UILocalNotificationDateInterpretation.absoluteTime,
-              matchDateTimeComponents: DateTimeComponents.time,
-            );
+            ),
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+          );
 
-            // Lưu vào history khi schedule
-            await _saveHistoryEntry(
-              NotificationLogEntry(
-                id: 'goal_daily_reminder_${goalId}_${tomorrowTime.millisecondsSinceEpoch}',
-                title: 'Nhắc nhở mục tiêu',
-                body: 'Đừng quên mục tiêu "$goalName" của bạn hôm nay!',
-                timestamp: tomorrowTime,
-                type: 'goal_daily_reminder',
-              ),
-            );
-          });
-
-          if (fallbackUsed) {
-            debugPrint(
-                '[NotificationService] ⚠️ Using inexact alarms (exact alarm permission denied)');
-            debugPrint(
-                '[NotificationService] ⚠️ Notification may not arrive at exact time');
-          }
-
-          debugPrint(
-              '[NotificationService] ✅ Reminder scheduled successfully (recurring from tomorrow at exact time)');
+          await _saveHistoryEntry(
+            NotificationLogEntry(
+              id: 'goal_daily_reminder_${goalId}_${immediateTime.millisecondsSinceEpoch}',
+              title: 'Nhắc nhở mục tiêu',
+              body: 'Đừng quên mục tiêu "$goalName" của bạn hôm nay!',
+              timestamp: DateTime.now(),
+              type: 'goal_daily_reminder',
+            ),
+          );
         } else {
-          // Schedule cho hôm nay hoặc ngày mai tùy vào thời gian
-          debugPrint(
-              '[NotificationService] 🔍 Final notification time before schedule: ${notificationTime.year}-${notificationTime.month}-${notificationTime.day} ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}.${notificationTime.millisecond}');
+          debugPrint('[NotificationService] 🔍 Final notification time before schedule: ${notificationTime.year}-${notificationTime.month}-${notificationTime.day} ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}.${notificationTime.millisecond}');
           final fallbackUsed = await _runWithExactFallback((mode) async {
             await _plugin.zonedSchedule(
               notificationId,
@@ -701,14 +668,11 @@ class NotificationService {
                 ),
               ),
               androidScheduleMode: mode,
-              uiLocalNotificationDateInterpretation:
-                  UILocalNotificationDateInterpretation.absoluteTime,
+              uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
               matchDateTimeComponents: DateTimeComponents.time,
             );
-            debugPrint(
-                '[NotificationService] ✅ Notification scheduled with time: ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}');
+            debugPrint('[NotificationService] ✅ Notification scheduled with time: ${notificationTime.hour}:${notificationTime.minute}:${notificationTime.second}');
 
-            // Lưu vào history khi schedule
             await _saveHistoryEntry(
               NotificationLogEntry(
                 id: 'goal_daily_reminder_${goalId}_${notificationTime.millisecondsSinceEpoch}',
@@ -721,17 +685,51 @@ class NotificationService {
           });
 
           if (fallbackUsed) {
-            debugPrint(
-                '[NotificationService] ⚠️ Using inexact alarms (exact alarm permission denied)');
-            debugPrint(
-                '[NotificationService] ⚠️ Notification may not arrive at exact time');
-            debugPrint(
-                '[NotificationService] ⚠️ To enable exact alarms: Settings → Apps → Fitness App → Alarms & reminders → Allow');
+            debugPrint('[NotificationService] ⚠️ Using inexact alarms (exact alarm permission denied)');
+            debugPrint('[NotificationService] ⚠️ Notification may not arrive at exact time');
+            debugPrint('[NotificationService] ⚠️ To enable exact alarms: Settings → Apps → Fitness App → Alarms & reminders → Allow');
           }
 
-          debugPrint(
-              '[NotificationService] ✅ Reminder scheduled successfully (recurring at exact time)');
+          debugPrint('[NotificationService] ✅ Reminder scheduled successfully (recurring at exact time)');
         }
+
+        // Lịch lặp hằng ngày bắt đầu từ ngày mai (đảm bảo nhắc mỗi ngày)
+        final tomorrowNotificationTime = notificationTime.add(const Duration(days: 1));
+        final recurringId = notificationId + 1000000;
+        final fallbackUsedRecurring = await _runWithExactFallback((mode) async {
+          await _plugin.zonedSchedule(
+            recurringId,
+            'Nhắc nhở mục tiêu',
+            'Đừng quên mục tiêu "$goalName" của bạn hôm nay!',
+            tomorrowNotificationTime,
+            NotificationDetails(
+              android: _buildAndroidDetails(
+                channelId: 'goal_daily_reminder_channel',
+                channelName: 'Nhắc nhở mục tiêu hàng ngày',
+                channelDescription: 'Thông báo nhắc nhở về mục tiêu mỗi ngày',
+              ),
+            ),
+            androidScheduleMode: mode,
+            uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+            matchDateTimeComponents: DateTimeComponents.time,
+          );
+
+          await _saveHistoryEntry(
+            NotificationLogEntry(
+              id: 'goal_daily_reminder_recurring_${goalId}_${tomorrowNotificationTime.millisecondsSinceEpoch}',
+              title: 'Nhắc nhở mục tiêu',
+              body: 'Đừng quên mục tiêu "$goalName" của bạn hôm nay!',
+              timestamp: tomorrowNotificationTime,
+              type: 'goal_daily_reminder',
+            ),
+          );
+        });
+
+        if (fallbackUsedRecurring) {
+          debugPrint('[NotificationService] ⚠️ Using inexact alarms for recurring notification');
+        }
+
+        debugPrint('[NotificationService] ✅ Reminder scheduled: immediate-or-today + recurring daily');
       }
       
       // Với weekly/monthly/yearly goals có deadline: schedule notification để tự động cancel reminder khi deadline qua
