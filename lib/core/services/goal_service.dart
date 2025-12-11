@@ -299,6 +299,15 @@ class GoalService {
     }
 
     final now = DateTime.now();
+    final checkTime = _buildDeadlineTime(goal.deadline!);
+    
+    // Nếu mục tiêu đã quá hạn, không hiển thị thông báo "sắp hết hạn" nữa
+    if (now.isAfter(checkTime)) {
+      await _clearWarningNotified(goal.id);
+      await notificationService.cancelGoalDeadlineNotifications(goal.id);
+      return;
+    }
+
     final warningTime = _buildWarningTime(goal.deadline!);
     if (now.isAfter(warningTime)) {
       final warned = await _isWarningNotified(goal.id);
@@ -340,16 +349,21 @@ class GoalService {
     
     if (now.isAfter(checkTime)) {
       // Mục tiêu đã quá hạn - chỉ thông báo 1 lần
+      // Kiểm tra flag để đảm bảo chỉ thông báo 1 lần duy nhất
       final notified = await _isDeadlineWarned(goal.id);
       if (!notified) {
         await notificationService.showGoalDeadlineWarning(
           goalId: goal.id,
           goalName: _getGoalDisplayName(goal),
         );
+        // Đánh dấu đã thông báo để không hiển thị lại nữa
         await _markDeadlineWarned(goal.id);
         // Cancel reminder khi đã quá hạn
         await notificationService.cancelGoalDailyReminder(goal.id);
+        // Cancel scheduled notification vì đã thông báo rồi
+        await notificationService.cancelGoalDeadlineNotifications(goal.id);
       }
+      // Nếu đã thông báo rồi, không làm gì cả (giữ nguyên flag)
     } else {
       // Chưa quá hạn - clear flag và schedule notification cho deadline
       await _clearDeadlineNotified(goal.id);
