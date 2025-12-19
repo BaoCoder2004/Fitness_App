@@ -64,9 +64,16 @@ class DashboardPage extends StatelessWidget {
           }).length;
 
           return Container(
+            width: double.infinity,
+            height: double.infinity,
             color: const Color(0xFFF6F8FB),
+            padding: EdgeInsets.fromLTRB(
+              MediaQuery.of(context).size.width > 600 ? 20 : 12,
+              20,
+              MediaQuery.of(context).size.width > 600 ? 20 : 12,
+              24,
+            ),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -77,7 +84,6 @@ class DashboardPage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  const SizedBox(height: 16),
                   // Cards row
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -91,7 +97,7 @@ class DashboardPage extends StatelessWidget {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
+                            mainAxisSpacing: 0,
                             childAspectRatio: 3.5,
                             padding: EdgeInsets.zero,
                             children: [
@@ -128,28 +134,50 @@ class DashboardPage extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          const SizedBox(height: 14),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: isWide ? 5 : 6,
-                                child: _DonutStatusChart(
-                                  data: {
-                                    'Active': activeUsers,
-                                    'Blocked': blockedUsers,
-                                    'Admin': adminUsers,
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: isWide ? 7 : 6,
-                                child: _RecentUsersCard(
-                                  recentUsers: recentUsers.take(5).toList(),
-                                ),
-                              ),
-                            ],
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isNarrow = constraints.maxWidth < 900;
+                              if (isNarrow) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _DonutStatusChart(
+                                      data: {
+                                        'Active': activeUsers,
+                                        'Blocked': blockedUsers,
+                                        'Admin': adminUsers,
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _RecentUsersCard(
+                                      recentUsers: recentUsers.take(5).toList(),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: isWide ? 5 : 6,
+                                    child: _DonutStatusChart(
+                                      data: {
+                                        'Active': activeUsers,
+                                        'Blocked': blockedUsers,
+                                        'Admin': adminUsers,
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: isWide ? 7 : 6,
+                                    child: _RecentUsersCard(
+                                      recentUsers: recentUsers.take(5).toList(),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       );
@@ -203,88 +231,171 @@ class _DonutStatusChart extends StatelessWidget {
         border: Border.all(color: Colors.grey.withOpacity(0.12)),
       ),
       padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-                flex: 3,
-            child: SizedBox(
-                  height: 200,
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 2,
-                      centerSpaceRadius: 42,
-                  sections: sections.isEmpty
-                      ? [
-                          PieChartSectionData(
-                            value: 1,
-                            color: Colors.grey.shade300,
-                            title: '',
-                          ),
-                        ]
-                      : sections
-                          .map(
-                            (e) => PieChartSectionData(
-                              value: e.value.toDouble(),
-                              color: colors[e.key] ?? Colors.blueGrey,
-                              title: '',
-                              radius: 56,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 400;
+                      if (isNarrow) {
+                        return Column(
+                          children: [
+                            SizedBox(
+                              height: 200,
+                              child: PieChart(
+                                PieChartData(
+                                  sectionsSpace: 2,
+                                  centerSpaceRadius: 42,
+                                  sections: sections.isEmpty
+                                      ? [
+                                          PieChartSectionData(
+                                            value: 1,
+                                            color: Colors.grey.shade300,
+                                            title: '',
+                                          ),
+                                        ]
+                                      : sections
+                                          .map(
+                                            (e) => PieChartSectionData(
+                                              value: e.value.toDouble(),
+                                              color: colors[e.key] ?? Colors.blueGrey,
+                                              title: '',
+                                              radius: 56,
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                              ),
                             ),
-                          )
-                          .toList(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tổng user: $total',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                ...data.entries.map((e) {
-                  final pct = total == 0 ? 0 : ((e.value / total) * 100).round();
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: colors[e.key] ?? Colors.blueGrey,
-                            borderRadius: BorderRadius.circular(6),
+                            const SizedBox(height: 16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tổng user: $total',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 12),
+                                ...data.entries.map((e) {
+                                  final pct = total == 0 ? 0 : ((e.value / total) * 100).round();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            color: colors[e.key] ?? Colors.blueGrey,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            e.key,
+                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${e.value} (${pct}%)',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: SizedBox(
+                              height: 200,
+                              child: PieChart(
+                                PieChartData(
+                                  sectionsSpace: 2,
+                                  centerSpaceRadius: 42,
+                                  sections: sections.isEmpty
+                                      ? [
+                                          PieChartSectionData(
+                                            value: 1,
+                                            color: Colors.grey.shade300,
+                                            title: '',
+                                          ),
+                                        ]
+                                      : sections
+                                          .map(
+                                            (e) => PieChartSectionData(
+                                              value: e.value.toDouble(),
+                                              color: colors[e.key] ?? Colors.blueGrey,
+                                              title: '',
+                                              radius: 56,
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            e.key,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tổng user: $total',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 12),
+                                ...data.entries.map((e) {
+                                  final pct = total == 0 ? 0 : ((e.value / total) * 100).round();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            color: colors[e.key] ?? Colors.blueGrey,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            e.key,
+                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${e.value} (${pct}%)',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          '${e.value} (${pct}%)',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ],
-      ),
+                        ],
+                      );
+                    },
+                  ),
     );
   }
 }
@@ -342,72 +453,158 @@ class _RecentUsersCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.blue.withOpacity(0.12),
-                        child: Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 500;
+                      if (isNarrow) {
+                        return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              name,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Colors.blue.withOpacity(0.12),
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
                                   ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                      Text(
+                                        email,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(color: Colors.black54),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              email,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: Colors.black54),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: roleColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    role == 'admin' ? 'Admin' : 'User',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    status == 'active' ? 'Hoạt động' : 'Bị khóa',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                Text(
+                                  createdAtText,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: Colors.black54),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: roleColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          role == 'admin' ? 'Admin' : 'User',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          status == 'active' ? 'Hoạt động' : 'Bị khóa',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        createdAtText,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Colors.black54),
-                      ),
-                    ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.blue.withOpacity(0.12),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                                Text(
+                                  email,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: Colors.black54),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: roleColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              role == 'admin' ? 'Admin' : 'User',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              status == 'active' ? 'Hoạt động' : 'Bị khóa',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            createdAtText,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: Colors.black54),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 );
               }).toList(),

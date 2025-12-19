@@ -18,8 +18,9 @@ class AdminLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sidebarColor = const Color(0xFF1F2933);
-    final isWide = MediaQuery.of(context).size.width > 1100;
+      final sidebarColor = const Color(0xFF1F2933);
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isWide = screenWidth > 1100;
     final showFullSidebar = ValueNotifier<bool>(false);
     void openSidebar() => showFullSidebar.value = true;
     void closeSidebar() => showFullSidebar.value = false;
@@ -81,7 +82,11 @@ class AdminLayout extends StatelessWidget {
               Expanded(
                 child: Container(
                   color: const Color(0xFFF6F8FB),
-                  child: child,
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: child,
+                  ),
                 ),
               ),
             ],

@@ -27,89 +27,190 @@ class _UnlockRequestsPageState extends State<UnlockRequestsPage> {
         width: double.infinity,
         height: double.infinity,
         color: const Color(0xFFF6F8FB),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: EdgeInsets.fromLTRB(
+          MediaQuery.of(context).size.width > 600 ? 20 : 12,
+          20,
+          MediaQuery.of(context).size.width > 600 ? 20 : 12,
+          24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Yêu cầu mở khóa',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 700;
+                if (isNarrow) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Yêu cầu mở khóa',
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Quản lý các yêu cầu mở khóa tài khoản của người dùng.',
+                            style: TextStyle(fontSize: 13, color: Colors.black54),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Quản lý các yêu cầu mở khóa tài khoản của người dùng.',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      const SizedBox(height: 12),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Tìm kiếm email hoặc họ tên...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        onChanged: (value) => setState(() => _search = value.trim().toLowerCase()),
+                      ),
+                      const SizedBox(height: 12),
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          popupMenuTheme: const PopupMenuThemeData(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+                            elevation: 6,
+                            enableFeedback: true,
+                            textStyle: TextStyle(color: Colors.black87),
+                            labelTextStyle: MaterialStatePropertyAll(TextStyle(color: Colors.black87)),
+                            menuPadding: EdgeInsets.zero,
+                            position: PopupMenuPosition.over,
+                            mouseCursor: MaterialStatePropertyAll(SystemMouseCursors.click),
+                          ),
+                        ),
+                        child: PopupMenuButton<String>(
+                          color: Colors.white,
+                          offset: const Offset(0, 44),
+                          constraints: const BoxConstraints(minWidth: 150, maxWidth: 200),
+                          initialValue: _filter,
+                          onSelected: (v) => setState(() => _filter = v),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'all', child: Text('Tất cả')),
+                            PopupMenuItem(value: 'pending', child: Text('Đang chờ')),
+                            PopupMenuItem(value: 'approved', child: Text('Đã duyệt')),
+                            PopupMenuItem(value: 'rejected', child: Text('Đã từ chối')),
+                          ],
+                          child: Container(
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _filter == 'all'
+                                        ? 'Tất cả'
+                                        : _filter == 'pending'
+                                            ? 'Đang chờ'
+                                            : _filter == 'approved'
+                                                ? 'Đã duyệt'
+                                                : 'Đã từ chối',
+                                    style: const TextStyle(fontSize: 14),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
-                  ),
-                ),
-                SizedBox(
-                  width: 280,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Tìm kiếm email hoặc họ tên...',
-                      prefixIcon: const Icon(Icons.search, size: 18),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    onChanged: (value) => setState(() => _search = value.trim().toLowerCase()),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 180, // rộng hơn để khớp với menu
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      popupMenuTheme: const PopupMenuThemeData(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
-                        elevation: 6,
-                        enableFeedback: true,
-                        textStyle: TextStyle(color: Colors.black87),
-                        labelTextStyle: MaterialStatePropertyAll(TextStyle(color: Colors.black87)),
-                        menuPadding: EdgeInsets.zero,
-                        position: PopupMenuPosition.over,
-                        mouseCursor: MaterialStatePropertyAll(SystemMouseCursors.click),
-                      ),
-                    ),
-                    child: PopupMenuButton<String>(
-                      color: Colors.white, // menu nền trắng
-                      offset: const Offset(0, 44), // đẩy menu xuống thêm chút
-                      constraints: const BoxConstraints(minWidth: 180, maxWidth: 200),
-                      initialValue: _filter,
-                      onSelected: (v) => setState(() => _filter = v),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(value: 'all', child: Text('Tất cả')),
-                        PopupMenuItem(value: 'pending', child: Text('Đang chờ')),
-                        PopupMenuItem(value: 'approved', child: Text('Đã duyệt')),
-                        PopupMenuItem(value: 'rejected', child: Text('Đã từ chối')),
-                      ],
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
+                  );
+                }
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Yêu cầu mở khóa',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Expanded(
-                              child: Text(
+                        SizedBox(height: 4),
+                        Text(
+                          'Quản lý các yêu cầu mở khóa tài khoản của người dùng.',
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                    SizedBox(
+                      width: 280,
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Tìm kiếm email hoặc họ tên...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        onChanged: (value) => setState(() => _search = value.trim().toLowerCase()),
+                      ),
+                    ),
+                    Theme(
+                      data: Theme.of(context).copyWith(
+                        popupMenuTheme: const PopupMenuThemeData(
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+                          elevation: 6,
+                          enableFeedback: true,
+                          textStyle: TextStyle(color: Colors.black87),
+                          labelTextStyle: MaterialStatePropertyAll(TextStyle(color: Colors.black87)),
+                          menuPadding: EdgeInsets.zero,
+                          position: PopupMenuPosition.over,
+                          mouseCursor: MaterialStatePropertyAll(SystemMouseCursors.click),
+                        ),
+                      ),
+                      child: PopupMenuButton<String>(
+                        color: Colors.white,
+                        offset: const Offset(0, 44),
+                        constraints: const BoxConstraints(minWidth: 180, maxWidth: 200),
+                        initialValue: _filter,
+                        onSelected: (v) => setState(() => _filter = v),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(value: 'all', child: Text('Tất cả')),
+                          PopupMenuItem(value: 'pending', child: Text('Đang chờ')),
+                          PopupMenuItem(value: 'approved', child: Text('Đã duyệt')),
+                          PopupMenuItem(value: 'rejected', child: Text('Đã từ chối')),
+                        ],
+                        child: Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
                                 _filter == 'all'
                                     ? 'Tất cả'
                                     : _filter == 'pending'
@@ -118,18 +219,17 @@ class _UnlockRequestsPageState extends State<UnlockRequestsPage> {
                                             ? 'Đã duyệt'
                                             : 'Đã từ chối',
                                 style: const TextStyle(fontSize: 14),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-                          ],
+                              const SizedBox(width: 6),
+                              const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 18),
             Expanded(

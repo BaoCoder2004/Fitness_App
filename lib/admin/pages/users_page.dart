@@ -151,78 +151,144 @@ class _UsersPageState extends State<UsersPage> {
         width: double.infinity,
         height: double.infinity,
         color: const Color(0xFFF6F8FB),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: EdgeInsets.fromLTRB(
+          MediaQuery.of(context).size.width > 600 ? 20 : 12,
+          20,
+          MediaQuery.of(context).size.width > 600 ? 20 : 12,
+          24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 220, maxWidth: 420),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Quản lý người dùng',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 700;
+                if (isNarrow) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quản lý người dùng',
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Theo dõi tài khoản, vai trò và trạng thái của người dùng.',
+                            style: TextStyle(fontSize: 13, color: Colors.black54),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Theo dõi tài khoản, vai trò và trạng thái của người dùng.',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Tìm kiếm email hoặc họ tên...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _FilterChipDropdown(
+                            label: 'Trạng thái',
+                            value: _filterStatus,
+                            items: const [
+                              ('all', 'Tất cả trạng thái'),
+                              ('active', 'Hoạt động'),
+                              ('blocked', 'Bị khóa'),
+                            ],
+                            onChanged: (v) => setState(() => _filterStatus = v),
+                          ),
+                          _FilterChipDropdown(
+                            label: 'Vai trò',
+                            value: _filterRole,
+                            items: const [
+                              ('all', 'Tất cả vai trò'),
+                              ('user', 'Người dùng'),
+                              ('admin', 'Admin'),
+                            ],
+                            onChanged: (v) => setState(() => _filterRole = v),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 260, maxWidth: 420),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Tìm kiếm email hoặc họ tên...',
-                      prefixIcon: const Icon(Icons.search, size: 18),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
+                  );
+                }
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Quản lý người dùng',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Theo dõi tài khoản, vai trò và trạng thái của người dùng.',
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                      ],
                     ),
-                    onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
-                  ),
-                ),
-                SizedBox(
-                  width: 190,
-                  child: _FilterChipDropdown(
-                    label: 'Trạng thái',
-                    value: _filterStatus,
-                    items: const [
-                      ('all', 'Tất cả trạng thái'),
-                      ('active', 'Hoạt động'),
-                      ('blocked', 'Bị khóa'),
-                    ],
-                    onChanged: (v) => setState(() => _filterStatus = v),
-                  ),
-                ),
-                SizedBox(
-                  width: 190,
-                  child: _FilterChipDropdown(
-                    label: 'Vai trò',
-                    value: _filterRole,
-                    items: const [
-                      ('all', 'Tất cả vai trò'),
-                      ('user', 'Người dùng'),
-                      ('admin', 'Admin'),
-                    ],
-                    onChanged: (v) => setState(() => _filterRole = v),
-                  ),
-                ),
-              ],
+                    SizedBox(
+                      width: 280,
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Tìm kiếm email hoặc họ tên...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                      ),
+                    ),
+                    _FilterChipDropdown(
+                      label: 'Trạng thái',
+                      value: _filterStatus,
+                      items: const [
+                        ('all', 'Tất cả trạng thái'),
+                        ('active', 'Hoạt động'),
+                        ('blocked', 'Bị khóa'),
+                      ],
+                      onChanged: (v) => setState(() => _filterStatus = v),
+                    ),
+                    _FilterChipDropdown(
+                      label: 'Vai trò',
+                      value: _filterRole,
+                      items: const [
+                        ('all', 'Tất cả vai trò'),
+                        ('user', 'Người dùng'),
+                        ('admin', 'Admin'),
+                      ],
+                      onChanged: (v) => setState(() => _filterRole = v),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 18),
             Expanded(
@@ -450,6 +516,7 @@ class _FilterChipDropdown extends StatelessWidget {
           )
           .toList(),
       child: Container(
+        constraints: const BoxConstraints(minWidth: 120),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -464,16 +531,16 @@ class _FilterChipDropdown extends StatelessWidget {
           border: Border.all(color: Colors.grey.withOpacity(0.16)),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.filter_list, size: 18, color: Colors.black54),
             const SizedBox(width: 8),
-            Expanded(
+            Flexible(
               child: Text(
                 items.firstWhere((e) => e.$1 == value).$2,
                 style: const TextStyle(fontWeight: FontWeight.w600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                softWrap: false,
               ),
             ),
             const SizedBox(width: 6),
