@@ -2,25 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Enum để chọn model Gemini
-enum GeminiModel {
-  flash, // gemini-2.5-flash (nhanh, ít tốn token)
-  pro,   // gemini-2.5-pro (chính xác hơn, tốn token hơn)
-}
-
-extension GeminiModelExtension on GeminiModel {
-  String get modelName {
-    switch (this) {
-      case GeminiModel.flash:
-        return 'gemini-2.5-flash';
-      case GeminiModel.pro:
-        return 'gemini-2.5-pro';
-    }
-  }
-}
-
 /// Service để tương tác với Google Gemini API
-/// Hỗ trợ cả 2 model: Flash (nhanh) và Pro (chính xác)
+/// Sử dụng model gemini-2.5-flash
 class GeminiService {
   GeminiService() {
     try {
@@ -63,14 +46,12 @@ Nhiệm vụ của bạn là:
   /// 
   /// [prompt] - Câu hỏi/input từ user
   /// [chatHistory] - Lịch sử chat (optional) để có context
-  /// [model] - Chọn model: Flash (mặc định, nhanh) hoặc Pro (chính xác hơn)
   /// [systemPrompt] - System prompt tùy chỉnh (optional)
   /// 
   /// Returns: Response text từ AI
   Future<String> sendMessage({
     required String prompt,
     List<Content>? chatHistory,
-    GeminiModel model = GeminiModel.flash,
     String? systemPrompt,
   }) async {
     if (!_isInitialized || _apiKey.isEmpty) {
@@ -81,7 +62,7 @@ Nhiệm vụ của bạn là:
     }
     try {
       final genAI = GenerativeModel(
-        model: model.modelName,
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
         systemInstruction: Content.system(
           systemPrompt ?? _defaultSystemPrompt,
@@ -107,14 +88,12 @@ Nhiệm vụ của bạn là:
   /// 
   /// [prompt] - Câu hỏi/input từ user
   /// [chatHistory] - Lịch sử chat (optional)
-  /// [model] - Chọn model: Flash hoặc Pro
   /// [systemPrompt] - System prompt tùy chỉnh (optional)
   /// 
   /// Returns: Stream<String> - Từng phần của response
   Stream<String> streamMessage({
     required String prompt,
     List<Content>? chatHistory,
-    GeminiModel model = GeminiModel.flash,
     String? systemPrompt,
   }) async* {
     if (!_isInitialized || _apiKey.isEmpty) {
@@ -125,7 +104,7 @@ Nhiệm vụ của bạn là:
     }
     try {
       final genAI = GenerativeModel(
-        model: model.modelName,
+        model: 'gemini-2.5-flash',
         apiKey: _apiKey,
         systemInstruction: Content.system(
           systemPrompt ?? _defaultSystemPrompt,
@@ -150,36 +129,5 @@ Nhiệm vụ của bạn là:
     }
   }
 
-  /// Tự động chọn model dựa trên độ phức tạp của câu hỏi
-  /// 
-  /// **Lưu ý về chi phí:**
-  /// - Flash: Miễn phí hoặc rất rẻ, phù hợp cho hầu hết câu hỏi
-  /// - Pro: Có thể mất phí, chỉ dùng cho câu hỏi phức tạp thực sự
-  /// 
-  /// Mặc định ưu tiên Flash để tiết kiệm chi phí.
-  GeminiModel selectModelForPrompt(String prompt) {
-    // Mặc định dùng Flash để tiết kiệm chi phí
-    // Chỉ dùng Pro cho các câu hỏi thực sự phức tạp
-    
-    // Tắt tự động chọn Pro để tiết kiệm chi phí
-    // Nếu muốn dùng Pro, có thể bỏ comment phần dưới
-    return GeminiModel.flash;
-    
-    // Uncomment để bật tự động chọn Pro cho câu hỏi phức tạp:
-    /*
-    final complexKeywords = [
-      'phân tích chi tiết',
-      'so sánh kỹ lưỡng',
-      'kế hoạch tổng thể',
-      'tư vấn chuyên sâu',
-    ];
-
-    final isComplex = complexKeywords.any(
-      (keyword) => prompt.toLowerCase().contains(keyword),
-    ) || prompt.length > 500; // Chỉ dùng Pro cho prompt rất dài
-
-    return isComplex ? GeminiModel.pro : GeminiModel.flash;
-    */
-  }
 }
 

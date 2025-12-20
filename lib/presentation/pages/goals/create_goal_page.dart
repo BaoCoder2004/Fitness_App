@@ -152,9 +152,15 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                       _SectionTitle('Loại hoạt động'),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        initialValue: _selectedActivityType,
+                        value: _selectedActivityType,
                         decoration: _inputDecoration(),
                         items: _buildActivityTypeItems(),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Vui lòng chọn loại hoạt động';
+                          }
+                          return null;
+                        },
                         onChanged: vm.isSubmitting || (isEditing && _isOverdue)
                             ? null
                             : (value) {
@@ -271,7 +277,9 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: (vm.isSubmitting || (isEditing && _isOverdue))
+                          onPressed: (vm.isSubmitting || 
+                                     (isEditing && _isOverdue) ||
+                                     (_selectedActivityType == null || _selectedActivityType!.isEmpty))
                               ? null
                               : () => _submit(vm),
                           child: vm.isSubmitting
@@ -387,6 +395,15 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
     }
     
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedActivityType == null || _selectedActivityType!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn loại hoạt động cho mục tiêu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     if (_selectedTimeFrame == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

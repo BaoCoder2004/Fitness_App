@@ -101,11 +101,13 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Row(
               children: [
                 CircleAvatar(
@@ -186,7 +188,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

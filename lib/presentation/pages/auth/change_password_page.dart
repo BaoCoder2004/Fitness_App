@@ -54,68 +54,94 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Đổi mật khẩu')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _currentPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Mật khẩu hiện tại',
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _currentVisible ? Icons.visibility : Icons.visibility_off,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _currentPasswordController,
+                  decoration: InputDecoration(
+                    labelText: 'Mật khẩu hiện tại',
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
                     ),
-                    onPressed: () =>
-                        setState(() => _currentVisible = !_currentVisible),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _currentVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setState(() => _currentVisible = !_currentVisible),
+                    ),
+                  ),
+                  obscureText: !_currentVisible,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập mật khẩu hiện tại';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _newPasswordController,
+                  decoration: InputDecoration(
+                    labelText: 'Mật khẩu mới',
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _newVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () =>
+                          setState(() => _newVisible = !_newVisible),
+                    ),
+                  ),
+                  obscureText: !_newVisible,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập mật khẩu mới';
+                    }
+                    if (value.length < 6) {
+                      return 'Mật khẩu mới phải ít nhất 6 ký tự';
+                    }
+                    if (value.length > 128) {
+                      return 'Mật khẩu mới không được vượt quá 128 ký tự';
+                    }
+                    if (value == _currentPasswordController.text) {
+                      return 'Mật khẩu mới phải khác mật khẩu cũ';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isProcessing ? null : _changePassword,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: _isProcessing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text('Xác nhận'),
                   ),
                 ),
-                obscureText: !_currentVisible,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu hiện tại';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _newPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Mật khẩu mới',
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _newVisible ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () =>
-                        setState(() => _newVisible = !_newVisible),
-                  ),
-                ),
-                obscureText: !_newVisible,
-                validator: (value) {
-                  if (value == null || value.length < 6) {
-                    return 'Mật khẩu mới phải ít nhất 6 ký tự';
-                  }
-                  if (value == _currentPasswordController.text) {
-                    return 'Mật khẩu mới phải khác mật khẩu cũ';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isProcessing ? null : _changePassword,
-                  child: _isProcessing
-                      ? const CircularProgressIndicator()
-                      : const Text('Xác nhận'),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

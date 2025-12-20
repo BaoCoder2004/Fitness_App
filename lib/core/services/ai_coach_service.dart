@@ -88,7 +88,6 @@ Trả lời bằng JSON format như đã hướng dẫn.
       // 3. Gọi Gemini API
       final response = await _geminiService.sendMessage(
         prompt: prompt,
-        model: GeminiModel.flash, // Dùng Flash để tiết kiệm chi phí và nhanh hơn
         systemPrompt: _systemPrompt,
       );
 
@@ -149,7 +148,6 @@ Trả lời bằng JSON format như đã hướng dẫn.
 
       final response = await _geminiService.sendMessage(
         prompt: prompt,
-        model: GeminiModel.flash,
         systemPrompt: _systemPrompt,
       );
 
@@ -226,7 +224,6 @@ Trả lời bằng JSON format như đã hướng dẫn.
 
       final response = await _geminiService.sendMessage(
         prompt: prompt,
-        model: GeminiModel.flash,
         systemPrompt: _systemPrompt,
       );
 

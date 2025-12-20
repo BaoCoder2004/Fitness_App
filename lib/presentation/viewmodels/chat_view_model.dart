@@ -22,14 +22,12 @@ class ChatViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool _isTyping = false;
-  GeminiModel _selectedModel = GeminiModel.flash; // Mặc định dùng Flash
   String? _currentConversationId; // ID của cuộc hội thoại hiện tại
 
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isTyping => _isTyping;
-  GeminiModel get selectedModel => _selectedModel;
   String? get currentConversationId => _currentConversationId;
 
   /// Gợi ý câu hỏi thường gặp
@@ -144,11 +142,10 @@ class ChatViewModel extends ChangeNotifier {
           })
           .toList();
 
-      // Sử dụng model được người dùng chọn (mặc định là Flash)
+      // Gửi message đến Gemini
       final response = await _geminiService.sendMessage(
         prompt: text.trim(),
         chatHistory: chatHistory,
-        model: _selectedModel,
       );
 
       final assistantMessage = ChatMessage(
@@ -298,10 +295,5 @@ class ChatViewModel extends ChangeNotifier {
     sendMessage(lastUserMessage.content);
   }
 
-  /// Thay đổi model được chọn
-  void setModel(GeminiModel model) {
-    _selectedModel = model;
-    notifyListeners();
-  }
 }
 

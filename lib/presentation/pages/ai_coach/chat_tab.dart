@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/services/gemini_service.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/chat_repository.dart';
 import '../../../presentation/viewmodels/chat_view_model.dart';
@@ -192,109 +191,6 @@ class _ChatTabState extends State<ChatTab> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 70,
-        leading: Consumer<ChatViewModel>(
-          builder: (context, viewModel, _) {
-            return Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: PopupMenuButton<GeminiModel>(
-                icon: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.smart_toy,
-                          size: 28,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          viewModel.selectedModel == GeminiModel.flash
-                              ? 'Flash'
-                              : 'Pro',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                tooltip: 'Chọn model AI',
-                offset: const Offset(0, 50),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onSelected: (model) {
-                  viewModel.setModel(model);
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem<GeminiModel>(
-                    value: GeminiModel.flash,
-                    child: Row(
-                      children: [
-                        Icon(
-                          viewModel.selectedModel == GeminiModel.flash
-                              ? Icons.check
-                              : null,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Flash'),
-                            Text(
-                              'Nhanh, miễn phí',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<GeminiModel>(
-                    value: GeminiModel.pro,
-                    child: Row(
-                      children: [
-                        Icon(
-                          viewModel.selectedModel == GeminiModel.pro
-                              ? Icons.check
-                              : null,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Pro'),
-                            Text(
-                              'Chính xác hơn',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
         title: const Text('Chat với AI'),
         actions: [
           // Nút Lịch sử - luôn hiển thị để user dễ truy cập lịch sử
