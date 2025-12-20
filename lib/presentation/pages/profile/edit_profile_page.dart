@@ -190,6 +190,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Vui lòng nhập họ tên';
                   }
+                  final trimmedValue = value.trim();
+                  // Kiểm tra độ dài tối thiểu
+                  if (trimmedValue.length < 6) {
+                    return 'Họ và tên phải có ít nhất 6 ký tự';
+                  }
+                  // Kiểm tra độ dài tối đa
+                  if (trimmedValue.length > 25) {
+                    return 'Họ và tên không được vượt quá 25 ký tự';
+                  }
+                  // Kiểm tra không được toàn số
+                  if (RegExp(r'^\d+$').hasMatch(trimmedValue)) {
+                    return 'Họ và tên không được toàn số';
+                  }
+                  // Kiểm tra không được chứa ký tự đặc biệt (chỉ cho phép chữ cái, dấu cách, và ký tự tiếng Việt)
+                  if (!RegExp(r'^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$').hasMatch(trimmedValue)) {
+                    return 'Họ và tên không được chứa ký tự đặc biệt hoặc số';
+                  }
                   return null;
                 },
               ),

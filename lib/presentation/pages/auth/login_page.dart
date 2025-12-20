@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../viewmodels/auth_view_model.dart';
 import '../../widgets/unlock_request_dialog.dart';
@@ -53,6 +54,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    // Load email đã lưu nếu có
+    _loadSavedEmail();
     // Clear error message khi vào LoginPage để tránh hiển thị thông báo lỗi cũ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -61,6 +64,34 @@ class _LoginPageState extends State<LoginPage> {
         _lastDisplayedError = null;
       }
     });
+  }
+
+  Future<void> _loadSavedEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString('remembered_email');
+      if (savedEmail != null && savedEmail.isNotEmpty) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _rememberMe = true;
+        });
+      }
+    } catch (e) {
+      // Ignore errors when loading saved email
+    }
+  }
+
+  Future<void> _saveEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_rememberMe) {
+        await prefs.setString('remembered_email', _emailController.text.trim());
+      } else {
+        await prefs.remove('remembered_email');
+      }
+    } catch (e) {
+      // Ignore errors when saving email
+    }
   }
 
   Future<void> _onSubmit() async {
@@ -77,6 +108,8 @@ class _LoginPageState extends State<LoginPage> {
         email,
         _passwordController.text,
       );
+      // Lưu email nếu đã chọn "Ghi nhớ đăng nhập"
+      await _saveEmail();
     } catch (e) {
       final message = viewModel.errorMessage;
       bool isBlocked = message?.toLowerCase().contains('khóa') == true ||
@@ -218,12 +251,28 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Vui lòng nhập email';
                   }
-                  if (!value.contains('@')) {
-                    return 'Email không hợp lệ';
+                  final trimmedValue = value.trim();
+                  // Kiểm tra định dạng email đúng (chặt chẽ hơn)
+                  // Không cho phép dấu chấm ở đầu/cuối phần local, không cho phép dấu chấm liên tiếp
+                  // Không cho phép dấu chấm/gạch ngang ở đầu/cuối domain
+                  final emailRegex = RegExp(
+                    r'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$',
+                  );
+                  if (!emailRegex.hasMatch(trimmedValue)) {
+                    return 'Email không đúng định dạng';
+                  }
+                  // Kiểm tra thêm: không được có dấu chấm liên tiếp
+                  if (trimmedValue.contains('..') || 
+                      trimmedValue.startsWith('.') || 
+                      trimmedValue.endsWith('.') ||
+                      trimmedValue.contains('@.') ||
+                      trimmedValue.contains('.@')) {
+                    return 'Email không đúng định dạng';
                   }
                   return null;
                 },
@@ -245,8 +294,14 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 obscureText: !_passwordVisible,
                 validator: (value) {
-                  if (value == null || value.length < 6) {
+                  if (value == null || value.isEmpty) {
+                    return 'Vui lòng nhập mật khẩu';
+                  }
+                  if (value.length < 6) {
                     return 'Mật khẩu phải có ít nhất 6 ký tự';
+                  }
+                  if (value.length > 128) {
+                    return 'Mật khẩu không được vượt quá 128 ký tự';
                   }
                   return null;
                 },
@@ -261,8 +316,18 @@ class _LoginPageState extends State<LoginPage> {
                           value: _rememberMe,
                           onChanged: isLoading
                               ? null
-                              : (value) => setState(
-                                  () => _rememberMe = value ?? false),
+                              : (value) async {
+                                  setState(() => _rememberMe = value ?? false);
+                                  // Xóa email đã lưu nếu bỏ chọn
+                                  if (!(value ?? false)) {
+                                    try {
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.remove('remembered_email');
+                                    } catch (e) {
+                                      // Ignore errors
+                                    }
+                                  }
+                                },
                         ),
                         const Text('Ghi nhớ đăng nhập'),
                       ],
@@ -297,6 +362,12 @@ class _LoginPageState extends State<LoginPage> {
                           setState(() => _isGoogleLoading = true);
                           try {
                             await authViewModel.signInWithGoogle();
+                            // Lưu email nếu đã chọn "Ghi nhớ đăng nhập"
+                            final googleEmail = authViewModel.currentUser?.email;
+                            if (googleEmail != null && _rememberMe) {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setString('remembered_email', googleEmail);
+                            }
                           } catch (e) {
                             final message = authViewModel.errorMessage;
                             bool isBlocked = message?.toLowerCase().contains('khóa') == true ||

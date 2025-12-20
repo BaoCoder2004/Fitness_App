@@ -118,9 +118,27 @@ class _UnlockRequestDialogState extends State<UnlockRequestDialog> {
                 controller: _emailController,
                 label: 'Email',
                 keyboardType: TextInputType.emailAddress,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email';
-                  if (!v.contains('@')) return 'Email không hợp lệ';
+                  final trimmedValue = v.trim();
+                  // Kiểm tra định dạng email đúng (chặt chẽ hơn)
+                  // Không cho phép dấu chấm ở đầu/cuối phần local, không cho phép dấu chấm liên tiếp
+                  // Không cho phép dấu chấm/gạch ngang ở đầu/cuối domain
+                  final emailRegex = RegExp(
+                    r'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$',
+                  );
+                  if (!emailRegex.hasMatch(trimmedValue)) {
+                    return 'Email không đúng định dạng';
+                  }
+                  // Kiểm tra thêm: không được có dấu chấm liên tiếp
+                  if (trimmedValue.contains('..') || 
+                      trimmedValue.startsWith('.') || 
+                      trimmedValue.endsWith('.') ||
+                      trimmedValue.contains('@.') ||
+                      trimmedValue.contains('.@')) {
+                    return 'Email không đúng định dạng';
+                  }
                   return null;
                 },
               ),
@@ -130,6 +148,23 @@ class _UnlockRequestDialogState extends State<UnlockRequestDialog> {
                 label: 'Họ tên',
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Vui lòng nhập họ tên';
+                  final trimmedValue = v.trim();
+                  // Kiểm tra độ dài tối thiểu
+                  if (trimmedValue.length < 6) {
+                    return 'Họ và tên phải có ít nhất 6 ký tự';
+                  }
+                  // Kiểm tra độ dài tối đa
+                  if (trimmedValue.length > 25) {
+                    return 'Họ và tên không được vượt quá 25 ký tự';
+                  }
+                  // Kiểm tra không được toàn số
+                  if (RegExp(r'^\d+$').hasMatch(trimmedValue)) {
+                    return 'Họ và tên không được toàn số';
+                  }
+                  // Kiểm tra không được chứa ký tự đặc biệt (chỉ cho phép chữ cái, dấu cách, và ký tự tiếng Việt)
+                  if (!RegExp(r'^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$').hasMatch(trimmedValue)) {
+                    return 'Họ và tên không được chứa ký tự đặc biệt hoặc số';
+                  }
                   return null;
                 },
               ),
@@ -184,12 +219,14 @@ class _UnlockRequestDialogState extends State<UnlockRequestDialog> {
     int maxLines = 1,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    AutovalidateMode? autovalidateMode,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
+      autovalidateMode: autovalidateMode,
       decoration: InputDecoration(
         labelText: label,
         filled: true,

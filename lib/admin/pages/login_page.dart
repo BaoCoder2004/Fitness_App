@@ -96,12 +96,28 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Vui lòng nhập email';
                       }
-                      if (!value.contains('@')) {
-                        return 'Email không hợp lệ';
+                      final trimmedValue = value.trim();
+                      // Kiểm tra định dạng email đúng (chặt chẽ hơn)
+                      // Không cho phép dấu chấm ở đầu/cuối phần local, không cho phép dấu chấm liên tiếp
+                      // Không cho phép dấu chấm/gạch ngang ở đầu/cuối domain
+                      final emailRegex = RegExp(
+                        r'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$',
+                      );
+                      if (!emailRegex.hasMatch(trimmedValue)) {
+                        return 'Email không đúng định dạng';
+                      }
+                      // Kiểm tra thêm: không được có dấu chấm liên tiếp
+                      if (trimmedValue.contains('..') || 
+                          trimmedValue.startsWith('.') || 
+                          trimmedValue.endsWith('.') ||
+                          trimmedValue.contains('@.') ||
+                          trimmedValue.contains('.@')) {
+                        return 'Email không đúng định dạng';
                       }
                       return null;
                     },
