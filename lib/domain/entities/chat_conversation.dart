@@ -12,7 +12,7 @@ class ChatConversation {
 
   final String id;
   final String userId;
-  final String title; // Tiêu đề cuộc hội thoại (có thể là câu hỏi đầu tiên)
+  final String title;
   final List<ChatMessage> messages;
   final DateTime createdAt;
   final DateTime updatedAt;
