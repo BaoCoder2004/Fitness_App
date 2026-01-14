@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     } catch (e) {
-      // Ignore errors when loading saved email
+      
     }
   }
 
@@ -90,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.remove('remembered_email');
       }
     } catch (e) {
-      // Ignore errors when saving email
+     
     }
   }
 
